@@ -111,6 +111,7 @@
       var msgs = {
         hello: I18N.t("Hola Mely, tengo una pregunta.", "Hi Mely, I have a question."),
         russian: I18N.t("Hola Mely, me interesa el curso de Manicura Rusa. ¿Qué fechas tienes disponibles?", "Hi Mely, I'm interested in the Russian Manicure course. What dates do you have available?"),
+        color: I18N.t("Hola Mely, busco un tono en particular. ¿Lo tienes?", "Hi Mely, I’m looking for a specific shade. Do you have it?"),
         gelx: I18N.t("Hola Mely, me interesa el curso de Gel-X. ¿Qué fechas tienes disponibles?", "Hi Mely, I'm interested in the Gel-X course. What dates do you have available?")
       };
       a.href = waLink(msgs[key] || msgs.hello);

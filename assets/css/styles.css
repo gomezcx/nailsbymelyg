@@ -837,3 +837,16 @@ p { margin: 0 0 1em; }
   .hand { width: 100%; margin-bottom: -10%; }
   .seg span { font-size: 12px; padding: 10px 2px; }
 }
+
+/* estudio: aviso de que hay muchos más tonos */
+.more-colors { margin: 16px 0 0; padding: 14px 16px; border-left: 2px solid var(--rose); background: rgba(224, 182, 185, .18); font-size: 15px; line-height: 1.5; color: var(--wine-soft); }
+.more-colors b { color: var(--wine); font-weight: 500; }
+.more-colors a { color: var(--wine); font-weight: 500; text-underline-offset: 4px; white-space: nowrap; }
+
+/* cursos: aprende viendo, practicando, creando */
+.learn-list { list-style: none; margin: 56px 0 0; padding: 0; display: grid; gap: 0; }
+.learn-list li { border-top: 1px solid rgba(243,236,232,.22); padding: 32px 0; display: grid; gap: 10px; }
+.learn-list h3 { font-size: clamp(34px, 5vw, 64px); text-transform: uppercase; line-height: 1; }
+.learn-list h3 em { font-weight: 400; text-transform: none; color: var(--rose); }
+.learn-list p { margin: 0; color: var(--on-wine-soft); max-width: 34em; font-size: 18px; }
+@media (min-width: 900px) { .learn-list li { grid-template-columns: 7fr 5fr; align-items: end; gap: 40px; } }

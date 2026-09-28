@@ -144,7 +144,7 @@
       $("#days").innerHTML = "";
       $("#slots").innerHTML = '<p class="state-msg">' + t("No pudimos cargar la agenda. ", "We couldn't load the schedule. ") +
         '<a href="' + C.squareBookingUrl + '" target="_blank" rel="noopener">' + t("Reserva en Square", "Book on Square") + "</a> " +
-        t("o escríbele a Mely por WhatsApp.", "or message Mely on WhatsApp.") + "</p>";
+        t("o escríbeme por WhatsApp.", "or message me on WhatsApp.") + "</p>";
     });
   }
 
@@ -278,7 +278,7 @@
       console.error(err);
       var msg = err.code === "CARD" ? t("Revisa los datos de la tarjeta.", "Please check your card details.")
         : err.code === "SLOT_TAKEN" ? t("Ese horario se acaba de ocupar. Elige otro, por favor.", "That time was just taken. Please pick another.")
-        : t("No pudimos confirmar tu cita. Inténtalo de nuevo o escríbele a Mely por WhatsApp.", "We couldn't confirm your appointment. Try again or message Mely on WhatsApp.");
+        : t("No pudimos confirmar tu cita. Inténtalo de nuevo o escríbeme por WhatsApp.", "We couldn't confirm your appointment. Try again or message me on WhatsApp.");
       showAlert(msg);
       if (err.code === "SLOT_TAKEN") { S.slots = null; S.slot = null; go(2); }
     }).then(function () { S.busy = false; btn.disabled = false; btn.textContent = t("Confirmar cita", "Confirm appointment"); });

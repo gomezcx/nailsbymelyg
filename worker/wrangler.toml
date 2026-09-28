@@ -1,0 +1,11 @@
+name = "nailsbymelyg-api"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[vars]
+SQUARE_ENV = "production"            # "sandbox" para probar
+SQUARE_LOCATION_ID = ""              # Square Developer › Locations
+ALLOWED_ORIGINS = "https://nailsbymelyg.com,https://www.nailsbymelyg.com"
+
+# El token NO va aquí. Se guarda como secreto:
+#   npx wrangler secret put SQUARE_ACCESS_TOKEN

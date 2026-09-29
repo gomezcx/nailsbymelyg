@@ -1213,3 +1213,7 @@ html { overflow-x: clip; }
 .cf-ticket .cf-state { margin: 0; color: #F6D9DC; font-size: 11px; }
 .cf-ticket .cf-state::before { display: none; }
 .cf-ticket .bk-ticket-info a { color: inherit; }
+
+/* reservar: los cursos junto a los servicios */
+.bk-courses { margin: 36px 0 0; }
+.bk-courses a.svc { text-decoration: none; color: inherit; }

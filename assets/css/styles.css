@@ -1206,3 +1206,10 @@ html { overflow-x: clip; }
 .cb-pay p:last-child { margin: 0; }
 .cb-pick { color: var(--wine); font-weight: 500; }
 #cb-done-h, #st4 { outline: none; }
+
+/* confirmar: la cita como tarjeta "te espero" */
+.cf-ticket { border: 0; padding: 0; background: none; }
+.cf-ticket .bk-ticket { margin-bottom: 18px; }
+.cf-ticket .cf-state { margin: 0; color: #F6D9DC; font-size: 11px; }
+.cf-ticket .cf-state::before { display: none; }
+.cf-ticket .bk-ticket-info a { color: inherit; }

@@ -27,11 +27,21 @@
           '<a data-wa="hello" href="' + window.MELY_WA(t("Hola Mely, quiero confirmar mi cita.", "Hi Mely, I'd like to confirm my appointment.")) + '" target="_blank" rel="noopener">' + t("escríbeme por WhatsApp", "message me on WhatsApp") + "</a>.</p>";
         return;
       }
+      // tarjeta personalizada "te espero" (la misma de la reserva) con los botones de confirmar
       out.innerHTML = r.bookings.map(function (b, i) {
-        return '<article class="cf-card" data-i="' + i + '">' +
-          '<p class="eyebrow">' + (b.confirmed ? t("✅ Confirmada", "✅ Confirmed") : t("Pendiente de confirmar", "Waiting for confirmation")) + "</p>" +
-          "<h2>" + esc(b.date) + " <em>" + esc(b.time) + "</em></h2>" +
-          '<p class="lead">' + esc(b.services.join(" + ")) + ' · 2727 N Mason Rd, Suite 301, Katy</p>' +
+        var hi = b.name ? esc(b.name) + t(", te espero", ", I can't wait to see you") : t("Te espero", "I can't wait to see you");
+        return '<article class="cf-card cf-ticket" data-i="' + i + '">' +
+          '<div class="bk-ticket">' +
+            '<div class="bk-ticket-top"><img src="assets/img/logo-light.png" width="480" height="244" alt="Nails by MelyG"><span class="eyebrow cf-state">' + (b.confirmed ? t("✅ Confirmada", "✅ Confirmed") : t("Por confirmar", "To confirm")) + "</span></div>" +
+            '<p class="bk-ticket-hi">' + hi.replace(/(te espero|I can't wait to see you)$/, "<em>$1</em>") + " 💅</p>" +
+            '<p class="bk-ticket-msg">' + t("Ese rato es solo tuyo. Confírmame que vienes para guardártelo; si no está confirmada 1 hora antes, la cita se libera.", "That time is all yours. Let me know you're coming so I can keep it for you; if it isn't confirmed 1 hour before, the spot is released.") + "</p>" +
+            '<dl class="bk-ticket-info">' +
+              "<div><dt>" + t("Cuándo", "When") + "</dt><dd>" + esc(b.date) + " · " + esc(b.time) + "</dd></div>" +
+              "<div><dt>" + t("Qué", "What") + "</dt><dd>" + esc(b.services.join(" + ") || t("Tu cita", "Your appointment")) + "</dd></div>" +
+              "<div><dt>" + t("Dónde", "Where") + '</dt><dd><a href="https://maps.app.goo.gl/jeEr8PQE1xyBjdHz8" target="_blank" rel="noopener">2727 N Mason Rd, Suite 301 · Katy, TX</a></dd></div>' +
+            "</dl>" +
+            '<p class="bk-ticket-sign">— Mely</p>' +
+          "</div>" +
           '<div class="step-actions">' +
           (b.confirmed ? "" : '<button class="btn" type="button" data-answer="yes"><span>' + t("Sí, ahí estaré", "Yes, I'll be there") + "</span></button>") +
           '<button class="back-link" type="button" data-answer="no">' + t("No podré ir, cancelar", "I can't make it, cancel") + "</button></div>" +
@@ -47,8 +57,8 @@
           card.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
           post("/confirm/answer", { token: b.token, answer: ans }).then(function (res) {
             var msg = card.querySelector(".cf-msg");
-            if (res.status === "confirmed") { card.querySelector(".eyebrow").textContent = t("✅ Confirmada", "✅ Confirmed"); msg.textContent = t("¡Gracias! Te espero 💅", "Thank you! See you soon 💅"); btn.remove(); }
-            else if (res.status === "cancelled") { card.querySelector(".eyebrow").textContent = t("Cancelada", "Cancelled"); msg.textContent = t("Tu cita quedó cancelada. Cuando quieras, reserva otra desde la web.", "Your appointment was cancelled. Book again anytime on the website."); card.querySelector(".step-actions").remove(); }
+            if (res.status === "confirmed") { card.querySelector(".cf-state").textContent = t("✅ Confirmada", "✅ Confirmed"); msg.textContent = t("¡Gracias! Te espero 💅", "Thank you! See you soon 💅"); btn.remove(); }
+            else if (res.status === "cancelled") { card.querySelector(".cf-state").textContent = t("Cancelada", "Cancelled"); msg.textContent = t("Tu cita quedó cancelada. Cuando quieras, reserva otra desde la web.", "Your appointment was cancelled. Book again anytime on the website."); card.querySelector(".step-actions").remove(); }
             else msg.textContent = t("Esta cita ya estaba cancelada.", "This appointment was already cancelled.");
             card.querySelectorAll("button").forEach(function (x) { x.disabled = false; });
           }).catch(function () {

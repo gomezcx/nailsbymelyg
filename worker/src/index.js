@@ -68,6 +68,13 @@ export default {
         const r = await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: "admin-" + id + "-" + bk.version, booking_version: bk.version });
         return json({ id, status: r.booking.status, start: r.booking.start_at }, 200, cors);
       }
+      if (request.method === "POST" && url.pathname === "/admin/text/test") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        if (!texting(env)) return json({ error: "Twilio no está configurado" }, 400, cors);
+        const kind = url.searchParams.get("kind") || "booked";
+        const demo = { en: false, name: url.searchParams.get("name") || "Dilmelys", date: "Jueves, 1 de octubre", time: "9:00 a. m.", confirmUrl: (env.SITE_URL || "https://nailsbymelyg.com") + "/confirmar.html" };
+        return json(await sendText(env, url.searchParams.get("to"), chatText(demo, kind)), 200, cors);
+      }
       if (request.method === "POST" && url.pathname === "/admin/courses/online") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
         return json(await coursesOnline(env, url.searchParams.get("on") === "1"), 200, cors);
@@ -88,6 +95,7 @@ export default {
           dry: url.searchParams.has("dry"),
           hours: url.searchParams.get("hours"),
           testTo: url.searchParams.get("to"),
+          testPhone: url.searchParams.get("phone"),
         }), 200, cors);
       }
       if (request.method === "GET" && url.pathname === "/giftcard/balance") return json(await giftBalance(env, url.searchParams.get("gan")), 200, cors);
@@ -270,14 +278,17 @@ async function book(env, b, ctx) {
     throw err;
   });
 
-  // tarjeta "te espero" por correo (si Resend está configurado)
-  if (env.RESEND_API_KEY && env.MAIL_FROM && ctx) {
+  // tarjeta "te espero": por WhatsApp/SMS (Twilio) y por correo (Resend), lo que esté configurado
+  if (ctx && (texting(env) || (env.RESEND_API_KEY && env.MAIL_FROM))) {
     ctx.waitUntil((async () => {
       const info = await reminderInfo(env, r.booking);
-      if (!info.email) return;
-      const mail = reminderMail(env, info, 0, "booked");
-      await resend(env, info.email, mail.subject, mail.html, mail.text);
-    })().catch((e) => console.error("BOOKED MAIL", e.stack || e)));
+      info.confirmUrl = (env.SITE_URL || "https://nailsbymelyg.com").replace(/\/$/, "") + "/confirmar.html?t=" + encodeURIComponent(await makeToken(env, r.booking.id));
+      if (texting(env) && info.phone) await sendText(env, info.phone, chatText(info, "booked")).catch((e) => console.error("BOOKED TEXT", e.stack || e));
+      if (env.RESEND_API_KEY && env.MAIL_FROM && info.email) {
+        const mail = reminderMail(env, info, 0, "booked");
+        await resend(env, info.email, mail.subject, mail.html, mail.text);
+      }
+    })().catch((e) => console.error("BOOKED MSG", e.stack || e)));
   }
 
   return { booking: { id: r.booking.id, startAt: r.booking.start_at, status: r.booking.status } };
@@ -417,7 +428,8 @@ const CONFIRM_MARK = "✅ Confirmada por la clienta";
 const TZ_DEFAULT = "America/Chicago";
 
 function e164(phone) {
-  const d = String(phone || "").replace(/\D/g, "");
+  const raw = String(phone || "").trim(), d = raw.replace(/\D/g, "");
+  if (raw.startsWith("+") && d.length >= 8 && d.length <= 15 && d[0] !== "1") return "+" + d; // números de fuera de EE. UU.
   if (d.length === 10) return "+1" + d;
   if (d.length === 11 && d[0] === "1") return "+" + d;
   return null;
@@ -603,15 +615,17 @@ async function runReminders(env, opt) {
       if (b.status !== "ACCEPTED" && b.status !== "PENDING") continue;
       try {
         const info = await reminderInfo(env, b);
-        if (!info.email || info.unsubscribed) { report.push({ booking: b.id, skipped: "no email" }); continue; }
         info.confirmUrl = (env.SITE_URL || "https://nailsbymelyg.com").replace(/\/$/, "") + "/confirmar.html?t=" + encodeURIComponent(await makeToken(env, b.id));
+        // WhatsApp / SMS (Twilio): no depende de que abra el correo
+        let chat = null;
+        if (texting(env) && (info.phone || opt.testPhone)) {
+          chat = opt.dry ? "dry" : await sendText(env, opt.testPhone || info.phone, chatText(info, h > 3 ? "reminder" : "soon")).catch((e) => "error: " + e.message);
+        }
+        if (!info.email || info.unsubscribed || !env.RESEND_API_KEY || !env.MAIL_FROM) { report.push({ booking: b.id, chat, mail: "skipped" }); continue; }
         const mail = reminderMail(env, info, h);
         const target = opt.testTo || info.email;
-        if (!opt.dry) {
-          if (!env.RESEND_API_KEY || !env.MAIL_FROM) throw new Error("Falta RESEND_API_KEY o MAIL_FROM");
-          await resend(env, target, mail.subject, mail.html, mail.text);
-        }
-        report.push({ booking: b.id, to: target, when: info.when, hours: h, sent: !opt.dry, subject: mail.subject });
+        if (!opt.dry) await resend(env, target, mail.subject, mail.html, mail.text);
+        report.push({ booking: b.id, to: target, when: info.when, hours: h, sent: !opt.dry, subject: mail.subject, chat });
       } catch (e) {
         console.error("REMINDER", b.id, e.stack || e);
         report.push({ booking: b.id, error: String(e.message || e) });
@@ -655,7 +669,7 @@ async function reminderInfo(env, b) {
   const time = new Intl.DateTimeFormat(loc, { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(start);
   return {
     id: b.id, en, start, minutes, services,
-    name: c.given_name || "", email: c.email_address || "",
+    name: c.given_name || "", email: c.email_address || "", phone: c.phone_number || "",
     unsubscribed: !!(c.preferences && c.preferences.email_unsubscribed),
     date: date.charAt(0).toUpperCase() + date.slice(1), time,
     when: date + " " + time,
@@ -716,6 +730,40 @@ function reminderMail(env, i, hours, kind) {
 }
 
 function stamp(d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
+
+/* ---------------- WhatsApp y SMS (Twilio) ----------------
+   Secretos: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN. Vars: TWILIO_SMS_FROM (+1…) y/o TWILIO_WA_FROM (whatsapp:+1…).
+   Primero intenta WhatsApp; si no llega (o no está configurado), manda SMS. */
+function texting(env) { return !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && (env.TWILIO_SMS_FROM || env.TWILIO_WA_FROM)); }
+
+function chatText(i, kind) {
+  const en = i.en, hi = i.name ? (en ? i.name : i.name) : "";
+  const place = "2727 N Mason Rd, Suite 301, Katy";
+  if (kind === "booked") return en
+    ? `💅 ${hi ? hi + ", " : ""}I can't wait to see you! Your appointment at Nails by MelyG is booked: ${i.date} at ${i.time}. 📍 ${place}. Your card and details: ${i.confirmUrl} — Mely`
+    : `💅 ¡${hi ? hi + ", " : ""}te espero! Tu cita en Nails by MelyG ya está lista: ${i.date} a las ${i.time}. 📍 ${place}. Tu tarjeta y los detalles: ${i.confirmUrl} — Mely`;
+  if (kind === "soon") return en
+    ? `💕 ${hi ? hi + ", " : ""}see you in a little while at ${i.time}! 📍 ${place}. — Mely`
+    : `💕 ${hi ? hi + ", " : ""}¡te espero en un ratito, a las ${i.time}! 📍 ${place}. — Mely`;
+  return en
+    ? `💅 Hi ${hi || "there"}! Tomorrow I'm waiting for you at ${i.time} at Nails by MelyG. Please confirm here (if it's not confirmed 1 h before, the spot is released): ${i.confirmUrl} — Mely`
+    : `💅 ¡Hola ${hi || "linda"}! Mañana te espero a las ${i.time} en Nails by MelyG. Confírmame aquí, porfa (si no está confirmada 1 h antes, la cita se libera): ${i.confirmUrl} — Mely`;
+}
+
+async function sendText(env, to, body) {
+  const phone = e164(to);
+  if (!phone) throw new Error("Invalid phone");
+  const send = (from, dest) => fetch("https://api.twilio.com/2010-04-01/Accounts/" + env.TWILIO_ACCOUNT_SID + "/Messages.json", {
+    method: "POST",
+    headers: { Authorization: "Basic " + btoa(env.TWILIO_ACCOUNT_SID + ":" + env.TWILIO_AUTH_TOKEN), "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ From: from, To: dest, Body: body }),
+  }).then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error("Twilio " + r.status + " " + (j.message || "")); return j.sid; });
+  if (env.TWILIO_WA_FROM) {
+    try { return { whatsapp: await send(env.TWILIO_WA_FROM, "whatsapp:" + phone) }; }
+    catch (e) { if (!env.TWILIO_SMS_FROM) throw e; console.error("WHATSAPP", e.message); }
+  }
+  return { sms: await send(env.TWILIO_SMS_FROM, phone) };
+}
 
 async function resend(env, to, subject, html, text) {
   const r = await fetch("https://api.resend.com/emails", {

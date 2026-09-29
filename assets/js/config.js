@@ -17,6 +17,8 @@ window.MELY_CONFIG = {
   squareBookingUrl: "https://book.squareup.com/appointments/k5i21phbyenjqm/location/LB3NRH4R7V151",
 
   whatsapp: "18323104747",
+  // Correo de Mely (opcional). Si se rellena, los pedidos de gift card también se pueden mandar por correo.
+  email: "",
   phoneDisplay: "+1 (832) 310-4747",
   instagram: "https://instagram.com/nailsbymelyg",
   tiktok: "https://tiktok.com/@nailsbymelyg",

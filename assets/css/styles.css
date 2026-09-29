@@ -1112,3 +1112,11 @@ p { margin: 0 0 1em; }
 .cf-card .lead { margin: 0; font-size: 17px; }
 .cf-card .step-actions { margin-top: 20px; }
 .cf-msg { margin: 12px 0 0; font-weight: 500; color: var(--wine); }
+
+/* ---------- Nada se sale por los lados (en el móvil la página no se desliza) ---------- */
+html { overflow-x: clip; }
+.hero, .technique, .courses-teaser, .about, .final-cta, .gift, .reels-sec, .looks { overflow-x: clip; }
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+  .hero, .technique, .courses-teaser, .about, .final-cta, .gift, .reels-sec, .looks { overflow-x: hidden; }
+}

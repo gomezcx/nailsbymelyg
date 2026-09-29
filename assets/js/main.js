@@ -429,4 +429,5 @@
   document.addEventListener("langchange", function () { refreshWa(); renderHours(); renderMenu(); renderStatus(); menuTabs(); });
   I18N.set(I18N.lang);
   reveal();
+
 })();

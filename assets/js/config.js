@@ -6,7 +6,7 @@
    ============================================================ */
 window.MELY_CONFIG = {
   // URL del Worker de Cloudflare (ver /worker/README.md). Ej: "https://api.nailsbymelyg.com"
-  apiBase: "",
+  apiBase: "https://nailsbymelyg-api.nailsbymelyg.workers.dev",
 
   // Web Payments SDK de Square (tarjeta de garantía de la reserva y pago de gift cards).
   // App de Square: "Web nailsbymelyg". Ahora en PRUEBAS (sandbox). Para pasar a real:

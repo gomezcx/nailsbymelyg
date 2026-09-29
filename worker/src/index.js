@@ -52,7 +52,7 @@ export default {
     try {
       if (request.method === "GET" && url.pathname === "/services") return json(await services(env, ctx), 200, cors, 600);
       if (request.method === "POST" && url.pathname === "/availability") return json(await availability(env, await body(request)), 200, cors);
-      if (request.method === "POST" && url.pathname === "/book") return json(await book(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/book") return json(await book(env, await body(request), ctx), 200, cors);
       if (request.method === "POST" && url.pathname === "/giftcard/purchase") return json(await giftPurchase(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/waitlist") return json(await waitlistJoin(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/lookup") return json(await confirmLookup(env, await body(request)), 200, cors);
@@ -168,7 +168,7 @@ async function availability(env, b) {
   return { slots };
 }
 
-async function book(env, b) {
+async function book(env, b, ctx) {
   // ---- validación
   const c = b.customer || {};
   const clean = (s, n) => String(s || "").trim().slice(0, n);
@@ -248,6 +248,16 @@ async function book(env, b) {
     if (err.status === 400) { err.code = "SLOT_TAKEN"; err.status = 409; err.public = "Slot taken"; }
     throw err;
   });
+
+  // tarjeta "te espero" por correo (si Resend está configurado)
+  if (env.RESEND_API_KEY && env.MAIL_FROM && ctx) {
+    ctx.waitUntil((async () => {
+      const info = await reminderInfo(env, r.booking);
+      if (!info.email) return;
+      const mail = reminderMail(env, info, 0, "booked");
+      await resend(env, info.email, mail.subject, mail.html, mail.text);
+    })().catch((e) => console.error("BOOKED MAIL", e.stack || e)));
+  }
 
   return { booking: { id: r.booking.id, startAt: r.booking.start_at, status: r.booking.status } };
 }
@@ -627,7 +637,8 @@ async function reminderInfo(env, b) {
   };
 }
 
-function reminderMail(env, i, hours) {
+function reminderMail(env, i, hours, kind) {
+  const booked = kind === "booked";
   const en = i.en;
   const address = env.ADDRESS || "2727 N Mason Rd, Suite 301, Katy, TX 77449";
   const maps = env.MAPS_URL || "https://maps.app.goo.gl/jeEr8PQE1xyBjdHz8";
@@ -642,10 +653,13 @@ function reminderMail(env, i, hours) {
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const hello = i.name ? (en ? "Hi " : "Hola ") + esc(i.name) + "," : (en ? "Hi," : "Hola,");
   const soon = hours <= 3;
-  const lead = soon ? (en ? "See you in a little while 💅" : "Te espero en un ratito 💅") : (en ? "See you tomorrow 💅" : "Te espero mañana 💅");
+  const lead = booked ? (en ? (i.name ? esc(i.name) + ", I can’t wait to see you 💅" : "I can’t wait to see you 💅") : (i.name ? esc(i.name) + ", te espero 💅" : "Te espero 💅"))
+    : soon ? (en ? "See you in a little while 💅" : "Te espero en un ratito 💅") : (en ? "See you tomorrow 💅" : "Te espero mañana 💅");
   const svc = i.services.length ? esc(i.services.join(" + ")) : (en ? "Your appointment" : "Tu cita");
   const dur = i.minutes ? (Math.floor(i.minutes / 60) ? Math.floor(i.minutes / 60) + " h " : "") + (i.minutes % 60 ? (i.minutes % 60) + " min" : "") : "";
-  const subject = soon
+  const subject = booked
+    ? (en ? "You’re booked! " + i.date + " at " + i.time + " 💅" : "¡Tu cita está lista! " + i.date + " a las " + i.time + " 💅")
+    : soon
     ? (en ? "Your appointment is at " + i.time + " today 💅" : "Tu cita es hoy a las " + i.time + " 💅")
     : (en ? "Reminder: " + i.date + " at " + i.time + " · Nails by MelyG" : "Recordatorio: " + i.date + " a las " + i.time + " · Nails by MelyG");
   const btn = (href, label, solid) => `<a href="${href}" style="display:inline-block;margin:0 8px 10px 0;padding:14px 22px;text-decoration:none;font:600 13px Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;${solid ? "background:#662E3A;color:#F3ECE8" : "border:1px solid #662E3A;color:#662E3A"}">${label}</a>`;
@@ -656,7 +670,8 @@ function reminderMail(env, i, hours) {
     </div>
     <div style="padding:30px 28px 10px;font-family:Georgia,serif">
       <p style="font:15px Arial,sans-serif;margin:0 0 6px;color:#7E5560">${hello}</p>
-      <h1 style="font-weight:400;font-style:italic;font-size:34px;line-height:1.15;margin:0 0 24px">${lead}</h1>
+      <h1 style="font-weight:400;font-style:italic;font-size:34px;line-height:1.15;margin:0 0 ${booked ? 12 : 24}px">${lead}</h1>
+      ${booked ? `<p style="font:16px Arial,sans-serif;line-height:1.6;margin:0 0 24px;color:#4E222C">${en ? "Your time with me is booked. Come relaxed: that time is all yours and we’re going to enjoy it. A day before, I’ll send you a reminder so you can confirm." : "Ya tienes tu hora conmigo. Ven sin prisa: ese rato es solo tuyo y lo vamos a disfrutar. Un día antes te mando un recordatorio para que la confirmes."}</p>` : ""}
       <table role="presentation" style="width:100%;border-collapse:collapse;font:16px Arial,sans-serif">
         <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;color:#7E5560;width:34%">${en ? "Service" : "Servicio"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0">${svc}${dur ? ` <span style="color:#7E5560">· ${dur}</span>` : ""}</td></tr>
         <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;color:#7E5560">${en ? "When" : "Cuándo"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0"><b>${esc(i.date)}</b><br>${esc(i.time)} <span style="color:#7E5560">(${en ? "Houston time" : "hora de Houston"})</span></td></tr>

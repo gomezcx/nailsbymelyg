@@ -337,8 +337,8 @@
       buildIcs();
       var dd = fmtDay(S.day, { weekday: "long", day: "numeric", month: "long" }), tm = fmtTime(S.slot.startAt);
       if (I.lang === "es") dd = dd.charAt(0).toLowerCase() + dd.slice(1);
-      $("#done-text").textContent = t("Te esperamos el ", "See you on ") + dd + t(" a las ", " at ") + tm + (/\.$/.test(tm) ? "" : ".") +
-        (useGift ? t(" Pagas con tu gift card •••• ", " You're paying with your gift card •••• ") + gift.gan.slice(-4) + "." : "");
+      $("#done-text").textContent = useGift ? t("Pagas con tu gift card •••• ", "You're paying with your gift card •••• ") + gift.gan.slice(-4) + "." : "";
+      ticket(customer.givenName, dd, tm, useGift);
       go(4);
     }).catch(function (err) {
       console.error(err);
@@ -350,6 +350,79 @@
       if (err.code === "SLOT_TAKEN") { S.slots = null; S.slot = null; go(2); }
     }).then(function () { S.busy = false; btn.disabled = false; btn.textContent = t("Confirmar cita", "Confirm appointment"); });
   });
+
+  /* ---------- tarjeta "te espero" ---------- */
+  var T = {};
+  function ticket(name, day, time, useGift) {
+    var s = svc(S.svcId);
+    T = {
+      hi: t(name + ", te espero", name + ", I can't wait to see you"),
+      msg: t("Ya tienes tu hora conmigo. Ven sin prisa: ese rato es solo tuyo y lo vamos a disfrutar.", "Your time with me is booked. Come relaxed: that time is all yours and we're going to enjoy it."),
+      when: day.charAt(0).toUpperCase() + day.slice(1) + " · " + time,
+      what: s[I.lang][0] + (S.addon ? " + " + removal()[I.lang][0] : "") + (useGift ? " · 🎁 gift card" : "")
+    };
+    $("#t-hi").innerHTML = escapeHtml(T.hi).replace(/(te espero|I can't wait to see you)$/, "<em>$1</em>");
+    $("#t-msg").textContent = T.msg;
+    $("#t-when").textContent = T.when;
+    $("#t-what").textContent = T.what;
+  }
+  function escapeHtml(x) { return String(x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function ticketPng() {
+    var W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var x = cv.getContext("2d"), gr = x.createLinearGradient(0, 0, W, H);
+    gr.addColorStop(0, "#8A4453"); gr.addColorStop(.55, "#662E3A"); gr.addColorStop(1, "#4E222C");
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    return new Promise(function (res) {
+      var logo = new Image(); logo.onload = logo.onerror = function () { res(logo); }; logo.src = "assets/img/logo-light.png";
+    }).then(function (logo) {
+      return (document.fonts ? document.fonts.ready : Promise.resolve()).then(function () { return logo; });
+    }).then(function (logo) {
+      var P = 96;
+      if (logo.naturalWidth) x.drawImage(logo, P, P, 320, 163);
+      x.fillStyle = "#E0B6B9"; x.font = "500 30px Jost, sans-serif"; x.textAlign = "right";
+      x.fillText(t("T U   C I T A", "Y O U R   A P P O I N T M E N T"), W - P, P + 50); x.textAlign = "left";
+      x.fillStyle = "#F3ECE8"; x.font = "italic 400 104px 'Playfair Display', Georgia, serif";
+      var y = wrapText(x, T.hi, P, 470, W - 2 * P, 116, 3);
+      x.font = "400 38px Jost, sans-serif"; x.globalAlpha = .9;
+      y = wrapText(x, T.msg, P, y + 40, W - 2 * P, 54, 4); x.globalAlpha = 1;
+      [[t("CUÁNDO", "WHEN"), T.when], [t("QUÉ", "WHAT"), T.what], [t("DÓNDE", "WHERE"), "2727 N Mason Rd, Suite 301 · Katy, TX"]].forEach(function (row) {
+        y += 44; x.fillStyle = "rgba(243,236,232,.25)"; x.fillRect(P, y, W - 2 * P, 2); y += 58;
+        x.fillStyle = "#E0B6B9"; x.font = "500 26px Jost, sans-serif"; x.fillText(row[0], P, y);
+        x.fillStyle = "#F3ECE8"; x.font = "500 36px Jost, sans-serif"; y = wrapText(x, row[1], P + 220, y, W - 2 * P - 220, 46, 2) - 46;
+      });
+      x.fillStyle = "#F3ECE8"; x.font = "italic 400 60px 'Playfair Display', Georgia, serif"; x.textAlign = "right";
+      x.fillText("— Mely", W - P, H - P); x.textAlign = "left";
+      return cv;
+    });
+  }
+  function wrapText(ctx, text, x0, y0, maxW, lh, max) {
+    var words = String(text).split(" "), line = "", lines = [];
+    words.forEach(function (w) { var test = line ? line + " " + w : w; if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; });
+    lines.push(line);
+    lines.slice(0, max).forEach(function (l, i) { ctx.fillText(l, x0, y0 + i * lh); });
+    return y0 + Math.min(lines.length, max) * lh;
+  }
+  $("#t-save").addEventListener("click", function () {
+    ticketPng().then(function (cv) {
+      var name = "mi-cita-nails-by-melyg.png";
+      cv.toBlob(function (blob) {
+        var file = blob && window.File ? new File([blob], name, { type: "image/png" }) : null;
+        if (file && navigator.canShare && navigator.canShare({ files: [file] }) && matchMedia("(pointer: coarse)").matches) {
+          navigator.share({ files: [file], title: "Nails by MelyG" }).catch(function () { openImg(cv); });
+        } else if (matchMedia("(pointer: coarse)").matches) openImg(cv);
+        else { var a = document.createElement("a"); a.download = name; a.href = cv.toDataURL("image/png"); document.body.appendChild(a); a.click(); a.remove(); }
+      }, "image/png");
+    });
+  });
+  // sin menú de compartir (WhatsApp/Instagram por dentro): se enseña la imagen para guardarla con el dedo
+  function openImg(cv) {
+    var d = document.createElement("dialog"); d.className = "gc-save";
+    d.innerHTML = '<img alt=""><p>' + t("Mantén presionada la imagen para guardarla en tus fotos.", "Press and hold the image to save it to your photos.") + '</p><div class="step-actions"><button class="back-link" type="button">' + t("Cerrar", "Close") + "</button></div>";
+    d.querySelector("img").src = cv.toDataURL("image/png");
+    document.body.appendChild(d);
+    d.querySelector("button").addEventListener("click", function () { d.close(); d.remove(); });
+    if (d.showModal) d.showModal(); else d.setAttribute("open", "");
+  }
 
   function buildIcs() {
     var s = svc(S.svcId), start = new Date(S.slot.startAt), end = new Date(start.getTime() + totalMin() * 6e4);

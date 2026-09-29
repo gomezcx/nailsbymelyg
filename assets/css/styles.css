@@ -1174,3 +1174,18 @@ html { overflow-x: clip; }
 }
 @keyframes m-cue { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .m-cue svg { animation: none; } }
+
+/* reserva: tarjeta "te espero" */
+.bk-ticket { --ink: #F3ECE8; position: relative; overflow: hidden; margin: 8px 0 28px; max-width: 520px; padding: clamp(22px, 5vw, 36px); border-radius: 22px; color: var(--ink); background: linear-gradient(135deg, #8A4453 0%, #662E3A 55%, #4E222C 100%); box-shadow: 0 40px 80px -40px rgba(58,24,32,.7), inset 0 1px 0 rgba(255,255,255,.18); transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .6s var(--ease); }
+.bk-ticket::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.16) 48%, transparent 60%); background-size: 250% 100%; animation: gc-shine 6s var(--ease-in-out) infinite; }
+.bk-ticket-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.bk-ticket-top img { width: 108px; height: auto; }
+.bk-ticket-top span { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #E0B6B9; font-weight: 500; }
+.bk-ticket-hi { margin: 26px 0 10px; font-family: var(--serif); font-size: clamp(30px, 8vw, 42px); line-height: 1.08; }
+.bk-ticket-hi em { font-style: italic; color: #F6D9DC; }
+.bk-ticket-msg { margin: 0 0 22px; font-size: 16px; line-height: 1.5; opacity: .92; }
+.bk-ticket-info { margin: 0; display: grid; }
+.bk-ticket-info div { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(243,236,232,.22); }
+.bk-ticket-info dt { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #E0B6B9; padding-top: 3px; }
+.bk-ticket-info dd { margin: 0; font-size: 16px; font-weight: 500; }
+.bk-ticket-sign { margin: 18px 0 0; text-align: right; font-family: var(--serif); font-style: italic; font-size: 26px; }

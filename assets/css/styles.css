@@ -1134,3 +1134,9 @@ html { overflow-x: clip; }
   html, body { overflow-x: hidden; }
   .hero, .technique, .courses-teaser, .about, .final-cta, .gift, .reels-sec, .looks { overflow-x: hidden; }
 }
+
+/* reserva: pagar con gift card */
+.bk-pay-seg { grid-template-columns: 1fr 1fr; max-width: 420px; }
+.bk-gift-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: stretch; }
+.bk-gift-row .btn { min-height: 52px; padding: 0 20px; }
+#gift-out b { font-weight: 600; }

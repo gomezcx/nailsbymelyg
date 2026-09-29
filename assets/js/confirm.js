@@ -21,14 +21,7 @@
   }
   function field(id, ok) { document.getElementById(id).closest(".field").classList.toggle("invalid", !ok); return ok; }
 
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    var phone = document.getElementById("cf-phone").value, check = document.getElementById("cf-check").value.trim();
-    var ok = field("cf-phone", phone.replace(/\D/g, "").length >= 10) & field("cf-check", check.length >= 2);
-    if (!ok) return;
-    if (!API) { out.innerHTML = '<p class="alert">' + t("La confirmación en línea no está disponible ahora. Escríbeme por WhatsApp.", "Online confirmation isn't available right now. Message me on WhatsApp.") + "</p>"; return; }
-    out.innerHTML = '<p class="note">' + t("Buscando tu cita…", "Looking up your appointment…") + "</p>";
-    post("/confirm/lookup", { phone: phone, check: check }).then(function (r) {
+  function show(r) {
       if (!r.bookings.length) {
         out.innerHTML = '<p class="alert">' + t("No encontré citas próximas con esos datos. Revisa el teléfono y el correo, o ", "I couldn't find upcoming appointments with those details. Check your phone and email, or ") +
           '<a data-wa="hello" href="' + window.MELY_WA(t("Hola Mely, quiero confirmar mi cita.", "Hi Mely, I'd like to confirm my appointment.")) + '" target="_blank" rel="noopener">' + t("escríbeme por WhatsApp", "message me on WhatsApp") + "</a>.</p>";
@@ -64,8 +57,31 @@
           });
         });
       });
-    }).catch(function () {
-      out.innerHTML = '<p class="alert">' + t("No se pudo buscar ahora. Inténtalo de nuevo en un momento.", "Couldn't search right now. Please try again in a moment.") + "</p>";
-    });
+  }
+  function failed() {
+    out.innerHTML = '<p class="alert">' + t("No se pudo buscar ahora. Inténtalo de nuevo en un momento.", "Couldn't search right now. Please try again in a moment.") + "</p>";
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var phone = document.getElementById("cf-phone").value, check = document.getElementById("cf-check").value.trim();
+    var ok = field("cf-phone", phone.replace(/\D/g, "").length >= 10) & field("cf-check", check.length >= 2);
+    if (!ok) return;
+    if (!API) { out.innerHTML = '<p class="alert">' + t("La confirmación en línea no está disponible ahora. Escríbeme por WhatsApp.", "Online confirmation isn't available right now. Message me on WhatsApp.") + "</p>"; return; }
+    out.innerHTML = '<p class="note">' + t("Buscando tu cita…", "Looking up your appointment…") + "</p>";
+    post("/confirm/lookup", { phone: phone, check: check }).then(show).catch(failed);
   });
+
+  // enlace directo del recordatorio (?t=…): la cita aparece sin escribir nada
+  var token = new URLSearchParams(location.search).get("t");
+  if (token && API) {
+    out.innerHTML = '<p class="note">' + t("Abriendo tu cita…", "Opening your appointment…") + "</p>";
+    post("/confirm/token", { token: token }).then(function (r) {
+      if (r.cancelled) { out.innerHTML = '<p class="alert">' + t("Esta cita ya está cancelada. Cuando quieras, reserva otra desde la web.", "This appointment is already cancelled. Book again anytime on the website.") + "</p>"; return; }
+      show(r);
+      var first = out.querySelector(".cf-card"); if (first) first.scrollIntoView({ block: "center" });
+    }).catch(function () {
+      out.innerHTML = '<p class="alert">' + t("Este enlace ya caducó. Busca tu cita con tu teléfono y tu correo aquí arriba.", "This link has expired. Look up your appointment with your phone and email above.") + "</p>";
+    });
+  }
 })();

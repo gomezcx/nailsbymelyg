@@ -245,9 +245,47 @@
 
   /* ---------- 3 · datos + tarjeta ---------- */
   var cardReady = null;
+  function payMode() { var r = document.querySelector('input[name="bk-pay"]:checked'); return r ? r.value : "card"; }
+  function setPay(mode) {
+    var gift = mode === "gift";
+    var r = document.querySelector('input[name="bk-pay"][value="' + mode + '"]'); if (r) r.checked = true;
+    $("#gift-field").hidden = !gift;
+    $("#card-field").hidden = gift || !LIVE || !C.squareAppId || !C.squareLocationId;
+  }
+  function price() { var s = svc(S.svcId); return s ? s.price + (S.addon ? removal().price : 0) : 0; }
+  // saldo de la gift card (lo que diga Square)
+  var gift = { gan: "", ok: false, balance: 0 };
+  function checkGift() {
+    var gan = $("#f-gift").value.replace(/\s/g, ""), out = $("#gift-out"), f = $("#f-gift").closest(".field");
+    gift = { gan: gan, ok: false, balance: 0 };
+    if (!/^[A-Za-z0-9]{8,20}$/.test(gan)) { f.classList.add("invalid"); out.textContent = t("Escribe el número completo de la gift card.", "Enter the full gift card number."); return Promise.resolve(false); }
+    f.classList.remove("invalid");
+    if (DEMO) { gift = { gan: gan, ok: true, balance: 100 }; out.innerHTML = giftText(); return Promise.resolve(true); }
+    out.textContent = t("Consultando saldo en Square…", "Checking balance with Square…");
+    return api("/giftcard/balance?gan=" + encodeURIComponent(gan)).then(function (r) {
+      gift.ok = !!(r.found && r.state === "ACTIVE" && r.balance > 0); gift.balance = r.balance || 0;
+      if (!gift.ok) { f.classList.add("invalid"); out.textContent = !r.found ? t("No encontré esa gift card. Revisa el número.", "I couldn't find that gift card. Check the number.") : t("Esta gift card no tiene saldo disponible.", "This gift card has no balance left."); }
+      else out.innerHTML = giftText();
+      return gift.ok;
+    }).catch(function () { out.textContent = t("No se pudo consultar ahora. Inténtalo de nuevo.", "Couldn't check right now. Try again."); return false; });
+  }
+  function giftText() {
+    var p = price(), rest = Math.max(0, p - gift.balance);
+    return "✅ <b>" + t("Saldo $", "Balance $") + gift.balance + "</b> · " + (rest
+      ? t("tu servicio cuesta $" + p + ": pagas los $" + rest + " que faltan en la cita.", "your service is $" + p + ": you pay the remaining $" + rest + " at your appointment.")
+      : t("cubre tu servicio de $" + p + ". Se cobra en tu cita.", "covers your $" + p + " service. It's charged at your appointment."));
+  }
+  document.querySelectorAll('input[name="bk-pay"]').forEach(function (r) { r.addEventListener("change", function () { setPay(payMode()); if (payMode() === "gift") $("#f-gift").focus(); }); });
+  $("#gift-check").addEventListener("click", checkGift);
+  $("#f-gift").addEventListener("change", checkGift);
+
   function enterStep3() {
+    if (!LIVE && !DEMO) return;
+    $("#pay-field").hidden = false;
+    var preGift = params.get("giftcard");
+    if (preGift && !$("#f-gift").value) { $("#f-gift").value = preGift; setPay("gift"); checkGift(); }
+    setPay(payMode());
     if (!LIVE || !C.squareAppId || !C.squareLocationId) return;
-    $("#card-field").hidden = false;
     if (cardReady) return;
     var src = C.squareEnv === "sandbox" ? "https://sandbox.web.squarecdn.com/v1/square.js" : "https://web.squarecdn.com/v1/square.js";
     cardReady = new Promise(function (res, rej) {
@@ -281,25 +319,31 @@
     var customer = { givenName: $("#f-given").value.trim(), familyName: $("#f-family").value.trim(), phone: e164($("#f-phone").value), email: $("#f-email").value.trim() };
     var note = $("#f-note").value.trim();
 
-    var tokenP = (LIVE && S.card) ? S.card.tokenize().then(function (r) {
+    var useGift = payMode() === "gift";
+    var giftP = useGift ? (gift.ok && gift.gan === $("#f-gift").value.replace(/\s/g, "") ? Promise.resolve(true) : checkGift()).then(function (ok) {
+      if (!ok) throw Object.assign(new Error("gift"), { code: "GIFT" });
+    }) : Promise.resolve();
+    var tokenP = useGift ? giftP.then(function () { return null; }) : (LIVE && S.card) ? S.card.tokenize().then(function (r) {
       if (r.status !== "OK") throw Object.assign(new Error("card"), { code: "CARD" });
       return r.token;
     }) : Promise.resolve(null);
 
-    var bookP = DEMO ? new Promise(function (res) { setTimeout(function () { res({ booking: { id: "DEMO" } }); }, 900); }) :
+    var bookP = DEMO ? giftP.then(function () { return new Promise(function (res) { setTimeout(function () { res({ booking: { id: "DEMO" } }); }, 900); }); }) :
       tokenP.then(function (token) {
-        return api("/book", { idempotencyKey: uid(), startAt: S.slot.startAt, segments: S.slot.segments, customer: customer, note: note, cardToken: token, lang: I.lang });
+        return api("/book", { idempotencyKey: uid(), startAt: S.slot.startAt, segments: S.slot.segments, customer: customer, note: note, cardToken: token, giftCardGan: useGift ? gift.gan : "", lang: I.lang });
       });
 
     bookP.then(function () {
       buildIcs();
       var dd = fmtDay(S.day, { weekday: "long", day: "numeric", month: "long" }), tm = fmtTime(S.slot.startAt);
       if (I.lang === "es") dd = dd.charAt(0).toLowerCase() + dd.slice(1);
-      $("#done-text").textContent = t("Te esperamos el ", "See you on ") + dd + t(" a las ", " at ") + tm + (/\.$/.test(tm) ? "" : ".");
+      $("#done-text").textContent = t("Te esperamos el ", "See you on ") + dd + t(" a las ", " at ") + tm + (/\.$/.test(tm) ? "" : ".") +
+        (useGift ? t(" Pagas con tu gift card •••• ", " You're paying with your gift card •••• ") + gift.gan.slice(-4) + "." : "");
       go(4);
     }).catch(function (err) {
       console.error(err);
       var msg = err.code === "CARD" ? t("Revisa los datos de la tarjeta.", "Please check your card details.")
+        : err.code === "GIFT" ? t("Revisa tu gift card: no la encontré o no tiene saldo.", "Check your gift card: I couldn't find it or it has no balance.")
         : err.code === "SLOT_TAKEN" ? t("Ese horario se acaba de ocupar. Elige otro, por favor.", "That time was just taken. Please pick another.")
         : t("No pudimos confirmar tu cita. Inténtalo de nuevo o escríbeme por WhatsApp.", "We couldn't confirm your appointment. Try again or message me on WhatsApp.");
       showAlert(msg);

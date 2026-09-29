@@ -56,6 +56,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/giftcard/purchase") return json(await giftPurchase(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/waitlist") return json(await waitlistJoin(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/lookup") return json(await confirmLookup(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/confirm/token") return json(await confirmByToken(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/answer") return json(await confirmAnswer(env, await body(request), ctx), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/run") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
@@ -188,6 +189,19 @@ async function book(env, b) {
   const match = again.find((a) => Date.parse(a.start_at) === Date.parse(b.startAt));
   if (!match) { const e = new Error("Slot taken"); e.status = 409; e.code = "SLOT_TAKEN"; e.public = "Slot taken"; throw e; }
 
+  // ---- pago con gift card de Square: se comprueba el saldo y se vincula a la clienta
+  // (en el salón aparece en su perfil y Mely la cobra desde Square)
+  let sellerNote = "", giftCard = null;
+  const gan = String(b.giftCardGan || "").replace(/\s/g, "");
+  if (gan) {
+    if (!/^[A-Za-z0-9]{8,20}$/.test(gan)) throw Object.assign(bad("Invalid gift card"), { code: "GIFT" });
+    const g = await sq(env, "/v2/gift-cards/from-gan", { gan }).then((r) => r.gift_card).catch((err) => { if (err.status === 400 || err.status === 404) return null; throw err; });
+    const balance = g && g.balance_money ? g.balance_money.amount / 100 : 0;
+    if (!g || g.state !== "ACTIVE" || balance <= 0) { const e = bad("Gift card not valid"); e.code = "GIFT"; e.status = 402; throw e; }
+    giftCard = g;
+    sellerNote = "🎁 Paga con gift card •••• " + gan.slice(-4) + " (saldo al reservar $" + balance + ")";
+  }
+
   // ---- clienta: buscar por correo o crear
   let customerId;
   const found = await sq(env, "/v2/customers/search", { query: { filter: { email_address: { exact: email } } }, limit: 1 });
@@ -205,8 +219,12 @@ async function book(env, b) {
     customerId = created.customer.id;
   }
 
+  if (giftCard && !(giftCard.customer_ids || []).includes(customerId)) {
+    await sq(env, "/v2/gift-cards/" + giftCard.id + "/link-customer", { customer_id: customerId }).catch((err) => console.error("GIFT LINK", err.stack || err));
+  }
+
   // ---- tarjeta de garantía (Web Payments SDK → Cards API)
-  if (b.cardToken) {
+  if (b.cardToken && !gan) {
     try {
       await sq(env, "/v2/cards", { idempotency_key: idem + "-k", source_id: String(b.cardToken), card: { customer_id: customerId } });
     } catch (err) {
@@ -223,6 +241,7 @@ async function book(env, b) {
       location_id: env.SQUARE_LOCATION_ID,
       customer_id: customerId,
       customer_note: (note ? note + "\n" : "") + "Reservada desde nailsbymelyg.com (" + (b.lang === "en" ? "EN" : "ES") + ")",
+      ...(sellerNote ? { seller_note: sellerNote } : {}),
       appointment_segments: match.appointment_segments,
     },
   }).catch((err) => {
@@ -421,6 +440,14 @@ async function confirmLookup(env, b) {
   return { bookings: out.slice(0, 5) };
 }
 
+// enlace directo del recordatorio: nailsbymelyg.com/confirmar.html?t=… abre la cita sin escribir nada
+async function confirmByToken(env, b) {
+  const id = await readToken(env, b.token);
+  const bk = (await sq(env, "/v2/bookings/" + id)).booking;
+  if (bk.status !== "ACCEPTED" && bk.status !== "PENDING") return { bookings: [], cancelled: true };
+  return { bookings: [Object.assign(await bookingSummary(env, bk), { token: String(b.token) })] };
+}
+
 async function confirmAnswer(env, b, ctx) {
   const id = await readToken(env, b.token);
   const bk = (await sq(env, "/v2/bookings/" + id)).booking;
@@ -542,6 +569,7 @@ async function runReminders(env, opt) {
       try {
         const info = await reminderInfo(env, b);
         if (!info.email || info.unsubscribed) { report.push({ booking: b.id, skipped: "no email" }); continue; }
+        info.confirmUrl = (env.SITE_URL || "https://nailsbymelyg.com").replace(/\/$/, "") + "/confirmar.html?t=" + encodeURIComponent(await makeToken(env, b.id));
         const mail = reminderMail(env, info, h);
         const target = opt.testTo || info.email;
         if (!opt.dry) {
@@ -634,6 +662,7 @@ function reminderMail(env, i, hours) {
         <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;color:#7E5560">${en ? "When" : "Cuándo"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0"><b>${esc(i.date)}</b><br>${esc(i.time)} <span style="color:#7E5560">(${en ? "Houston time" : "hora de Houston"})</span></td></tr>
         <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;border-bottom:1px solid #D9C3C0;color:#7E5560">${en ? "Where" : "Dónde"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0;border-bottom:1px solid #D9C3C0"><a href="${maps}" style="color:#662E3A">${esc(address)}</a></td></tr>
       </table>
+      ${i.confirmUrl ? `<p style="font:15px Arial,sans-serif;line-height:1.6;margin:26px 0 12px">${en ? "Please confirm you’re coming. If it isn’t confirmed 1 hour before, the spot is released." : "Confirma que vienes, por favor. Si no está confirmada 1 hora antes, la cita se libera."}</p><p style="margin:0">${btn(i.confirmUrl, en ? "Confirm my appointment" : "Confirmar mi cita", true)}</p>` : ""}
       <div style="margin:26px 0 8px">${btn(maps, en ? "Get directions" : "Cómo llegar", true)}${btn(gcal, en ? "Add to calendar" : "Añadir al calendario", false)}</div>
       <p style="font:14px Arial,sans-serif;line-height:1.6;color:#7E5560;margin:18px 0">${en
         ? "Coming in with gel or acrylic from another salon? Let me know so I can plan the removal. If you need to change or cancel, please message me at least 24 hours ahead."
@@ -642,7 +671,7 @@ function reminderMail(env, i, hours) {
     </div>
     <div style="padding:18px 28px;border-top:1px solid #D9C3C0;font:12px Arial,sans-serif;color:#7E5560">Nails by MelyG · ${esc(address)} · <a href="${site}" style="color:#7E5560">nailsbymelyg.com</a></div>
   </div></div></body></html>`;
-  const text = `${hello}\n${lead}\n\n${i.services.join(" + ") || ""}\n${i.date}, ${i.time}\n${address}\n${maps}\n\n${en ? "Change or cancel 24 h ahead" : "Cambios o cancelaciones con 24 h de anticipación"}: ${wa}`;
+  const text = `${hello}\n${lead}\n\n${i.confirmUrl ? (en ? "Confirm your appointment: " : "Confirma tu cita: ") + i.confirmUrl + "\n\n" : ""}${i.services.join(" + ") || ""}\n${i.date}, ${i.time}\n${address}\n${maps}\n\n${en ? "Change or cancel 24 h ahead" : "Cambios o cancelaciones con 24 h de anticipación"}: ${wa}`;
   return { subject, html, text };
 }
 

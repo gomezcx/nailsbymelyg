@@ -462,6 +462,7 @@
     $("[data-gc-hero]").hidden = true;
     var v = $("[data-gc-viewer]"); v.hidden = false;
     var note = $(".gc-note"); if (note) note.hidden = true;
+    $("[data-gc-book]").href = "reservar.html?giftcard=" + encodeURIComponent(issued.gan) + (DEMO ? "&demo=1" : "");
     $("[data-gc-v-title]").innerHTML = t("Para ", "For ") + "<em>" + escapeHtml(S.to) + "</em>";
     var st = $("[data-gc-status]"); st.textContent = t("Consultando saldo en Square…", "Checking balance with Square…");
     checkBalance(issued.gan).then(function (r) { st.innerHTML = stateText(r, S.amount); }).catch(function () { st.innerHTML = stateText(null); });

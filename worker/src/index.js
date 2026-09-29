@@ -461,16 +461,17 @@ async function bookingSummary(env, b, en) {
 }
 
 async function confirmLookup(env, b) {
-  const phone = e164(b.phone);
-  const check = String(b.check || "").trim().toLowerCase();
-  if (!phone || check.length < 2) throw bad("Invalid data");
-  const found = await sq(env, "/v2/customers/search", { query: { filter: { phone_number: { exact: phone } } }, limit: 10 });
+  // basta con el teléfono o con el correo de la reserva
+  const email = String(b.email || "").trim().toLowerCase();
+  const phone = b.phone ? e164(b.phone) : null;
+  let filter;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) filter = { email_address: { exact: email } };
+  else if (phone) filter = { phone_number: { exact: phone } };
+  else throw bad("Invalid data");
+  const found = await sq(env, "/v2/customers/search", { query: { filter }, limit: 10 });
   const now = Date.now();
   const out = [];
   for (const c of found.customers || []) {
-    // segunda comprobación: correo o nombre, para que nadie vea citas ajenas con solo un teléfono
-    const email = String(c.email_address || "").toLowerCase(), name = String(c.given_name || "").toLowerCase();
-    if (!(email && email === check) && !(name && name.startsWith(check))) continue;
     const q = new URLSearchParams({ customer_id: c.id, location_id: env.SQUARE_LOCATION_ID,
       start_at_min: new Date(now).toISOString(), start_at_max: new Date(now + 31 * 864e5).toISOString(), limit: "20" });
     const r = await sq(env, "/v2/bookings?" + q.toString());

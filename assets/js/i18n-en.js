@@ -183,6 +183,9 @@ window.MELY_EN = {
   "bk.h4": "You’re <em>booked!</em>",
   "bk.doneMail": "You’ll get a confirmation email. A day before, I’ll remind you so you can confirm.",
   "bk.tLabel": "Your appointment",
+  "cf.id": "Your phone or your email",
+  "cf.idPh": "(832) 000-0000 · you@email.com",
+  "cf.idErr": "Enter the phone or email you booked with.",
   "cb.demo": "Demo mode: dates are samples and nothing is charged.",
   "cb.eyebrow": "Enrollment",
   "cb.h1": "Save your <em>course</em>",
@@ -382,7 +385,7 @@ window.MELY_EN = {
   "cf.phone": "Phone you booked with",
   "cf.check": "Your email or first name",
   "cf.find": "Find my appointment",
-  "cf.privacy": "I only show your appointment if the phone and email (or name) match your booking.",
+  "cf.privacy": "With the phone or email you booked with, either one.",
   "wl.sum": "No time that works for you this day? <b>Join the waitlist</b>",
   "wl.phone": "Phone (optional)",
   "wl.join": "Notify me if a spot opens"

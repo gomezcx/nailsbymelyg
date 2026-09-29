@@ -23,7 +23,7 @@
 
   function show(r) {
       if (!r.bookings.length) {
-        out.innerHTML = '<p class="alert">' + t("No encontré citas próximas con esos datos. Revisa el teléfono y el correo, o ", "I couldn't find upcoming appointments with those details. Check your phone and email, or ") +
+        out.innerHTML = '<p class="alert">' + t("No encontré citas próximas con ese dato. Prueba con el otro (teléfono o correo), o ", "I couldn't find upcoming appointments with that. Try the other one (phone or email), or ") +
           '<a data-wa="hello" href="' + window.MELY_WA(t("Hola Mely, quiero confirmar mi cita.", "Hi Mely, I'd like to confirm my appointment.")) + '" target="_blank" rel="noopener">' + t("escríbeme por WhatsApp", "message me on WhatsApp") + "</a>.</p>";
         return;
       }
@@ -74,12 +74,13 @@
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
-    var phone = document.getElementById("cf-phone").value, check = document.getElementById("cf-check").value.trim();
-    var ok = field("cf-phone", phone.replace(/\D/g, "").length >= 10) & field("cf-check", check.length >= 2);
-    if (!ok) return;
+    // basta con el teléfono o con el correo
+    var id = document.getElementById("cf-id").value.trim();
+    var isMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id);
+    if (!field("cf-id", isMail || id.replace(/\D/g, "").length >= 10)) return;
     if (!API) { out.innerHTML = '<p class="alert">' + t("La confirmación en línea no está disponible ahora. Escríbeme por WhatsApp.", "Online confirmation isn't available right now. Message me on WhatsApp.") + "</p>"; return; }
     out.innerHTML = '<p class="note">' + t("Buscando tu cita…", "Looking up your appointment…") + "</p>";
-    post("/confirm/lookup", { phone: phone, check: check }).then(show).catch(failed);
+    post("/confirm/lookup", isMail ? { email: id } : { phone: id }).then(show).catch(failed);
   });
 
   // enlace directo del recordatorio (?t=…): la cita aparece sin escribir nada

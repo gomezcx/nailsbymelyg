@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400..600;1,400..500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/styles.css?v=202609291840">
+<link rel="stylesheet" href="assets/css/styles.css?v=202609292010">
 <script>(function(d){d.classList.replace("no-js","js");try{if(sessionStorage.getItem("mely-nav"))d.classList.add("is-entering")}catch(e){}if(!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("motion-wait");setTimeout(function(){d.classList.remove("motion-wait","is-entering")},4000)})(document.documentElement)</script>
 </head>
 <body data-page="giftcard">
@@ -33,6 +33,7 @@
       <a href="servicios.html" data-i18n="nav.services">Servicios</a>
       <a href="cursos.html" data-i18n="nav.courses">Cursos</a>
       <a href="galeria.html" data-i18n="nav.gallery">Galería</a>
+      <a href="giftcard.html" aria-current="page" data-i18n="foot.gift">Gift cards</a>
       <a href="./#mely" data-i18n="nav.about">Sobre mí</a>
       <a href="./#visitanos" data-i18n="nav.visit">Visítanos</a>
     </nav>
@@ -61,8 +62,9 @@
     <a href="servicios.html"><span data-i18n="nav.services">Servicios</span><small>02</small></a>
     <a href="cursos.html"><span data-i18n="nav.courses">Cursos</span><small>03</small></a>
     <a href="galeria.html"><span data-i18n="nav.gallery">Galería</span><small>04</small></a>
-    <a href="./#mely"><span data-i18n="nav.about">Sobre mí</span><small>05</small></a>
-    <a href="./#visitanos"><span data-i18n="nav.visit">Visítanos</span><small>06</small></a>
+    <a href="giftcard.html" aria-current="page"><span data-i18n="foot.gift">Gift cards</span><small>05</small></a>
+    <a href="./#mely"><span data-i18n="nav.about">Sobre mí</span><small>06</small></a>
+    <a href="./#visitanos"><span data-i18n="nav.visit">Visítanos</span><small>07</small></a>
   </nav>
   <div class="foot">
     <div class="lang-big" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es" aria-pressed="true">Español</button><button type="button" data-lang="en" aria-pressed="false">English</button></div>
@@ -76,7 +78,7 @@
     <div class="wrap">
       <p class="eyebrow" data-i18n="gc.eyebrow">Gift cards</p>
       <h1 data-i18n="gc.h1">Regala <em>uñas que inspiran</em></h1>
-      <p class="lead" data-i18n="gc.lead">Diseña tu gift card en un minuto: elige el monto, escribe tu mensaje y dale tu toque. Yo te confirmo el pago y la envío por WhatsApp o por correo, como prefieras.</p>
+      <p class="lead" data-i18n="gc.lead">Diseña tu gift card en un minuto: elige el monto, escribe tu mensaje y dale tu toque. Pagas aquí con Square y la envías por WhatsApp o por correo, como prefieras.</p>
     </div>
   </section>
 
@@ -103,6 +105,7 @@
       </div>
 
       <form class="gc-form" data-gc-form novalidate>
+        <p class="gc-linked" data-gc-linked hidden><span data-gc-linked-text></span> <button class="back-link" type="button" data-gc-unlink data-i18n="gc.unlink">Comprar una nueva</button></p>
         <fieldset class="gc-step">
           <legend><span class="n">01</span> <span data-i18n="gc.s1">¿Cuánto quieres regalar?</span></legend>
           <div class="gc-amounts" data-gc-amounts role="radiogroup"></div>
@@ -194,8 +197,9 @@
   <section class="section on-white gc-balance" data-gc-balance hidden aria-labelledby="bal-title">
     <div class="wrap gc-balance-inner">
       <div>
-        <p class="eyebrow" data-i18n="gc.balEyebrow">¿Ya tienes una?</p>
-        <h2 id="bal-title" data-i18n="gc.balH">Consulta <em>tu saldo</em></h2>
+        <p class="eyebrow" data-i18n="gc.balEyebrow">¿Ya tienes una gift card de Square?</p>
+        <h2 id="bal-title" data-i18n="gc.balH">Consulta tu saldo <em>o dale tu diseño</em></h2>
+        <p class="lead" data-i18n="gc.balLead">Si la compraste en el salón o en mi página de Square, escribe su número: ves el saldo y puedes personalizarla aquí con tu mensaje, sin pagar nada más.</p>
       </div>
       <form class="gc-bal-form" data-gc-bal-form novalidate>
         <label class="field"><span class="label" data-i18n="gc.balL">Número de la gift card</span><input data-gc-bal-input inputmode="numeric" autocomplete="off" placeholder="7783 3200 0000 0000"></label>
@@ -245,12 +249,12 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
-<script src="assets/js/config.js?v=202609291840" defer></script>
-<script src="assets/js/data.js?v=202609291840" defer></script>
-<script src="assets/js/i18n-en.js?v=202609291840" defer></script>
-<script src="assets/js/main.js?v=202609291840" defer></script>
-<script src="assets/js/nail.js?v=202609291840" defer></script>
-<script src="assets/js/giftcard.js?v=202609291840" defer></script>
-<script src="assets/js/motion.js?v=202609291840" defer></script>
+<script src="assets/js/config.js?v=202609292010" defer></script>
+<script src="assets/js/data.js?v=202609292010" defer></script>
+<script src="assets/js/i18n-en.js?v=202609292010" defer></script>
+<script src="assets/js/main.js?v=202609292010" defer></script>
+<script src="assets/js/nail.js?v=202609292010" defer></script>
+<script src="assets/js/giftcard.js?v=202609292010" defer></script>
+<script src="assets/js/motion.js?v=202609292010" defer></script>
 </body>
 </html>

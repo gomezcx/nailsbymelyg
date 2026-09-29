@@ -51,6 +51,7 @@
   var STORE = "mely-giftcard";
   var S = { mode: "amount", amount: 75, custom: "", service: "mani-gel", theme: "burdeos", polish: 0, to: "", from: "", msg: "", via: "whatsapp", contact: "", direct: false, buyerEmail: "" };
   var issued = null; // { gan, link, emailSent } cuando Square ya creó la tarjeta
+  var linked = null; // { gan, balance }: gift card de Square comprada fuera de la web (salón, página de Square)
   try { var saved = JSON.parse(localStorage.getItem(STORE) || "null"); if (saved) for (var k in S) if (k in saved) S[k] = saved[k]; } catch (e) {}
   function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
 
@@ -131,13 +132,14 @@
     $("[data-gc-from]").textContent = S.from.trim() || "—";
     $("[data-gc-msg]").textContent = S.msg.trim() || t("Para que te consientas.", "Go pamper yourself.");
     var amt = $("[data-gc-amount]");
-    if (S.mode === "service") { amt.textContent = svc()[I.lang][0]; amt.classList.add("is-service"); }
+    if (linked) { amt.textContent = "$" + linked.balance; amt.classList.remove("is-service"); }
+    else if (S.mode === "service") { amt.textContent = svc()[I.lang][0]; amt.classList.add("is-service"); }
     else { amt.textContent = "$" + (value() || "—"); amt.classList.remove("is-service"); }
     $("[data-gc-code]").textContent = issued ? fmtGan(issued.gan) : t("Pedido ", "Order ") + code;
     $("[data-gc-count]").textContent = (S.msg || "").length + "/120";
     var p = POLISH[S.polish] || POLISH[0];
     nail.set({ finish: p.finish || "gloss", polish: p.c, animate: !!animate });
-    $("[data-gc-summary]").innerHTML = "<b>" + valueLabel() + "</b> · " + t("para ", "for ") + escapeHtml(to) +
+    $("[data-gc-summary]").innerHTML = "<b>" + (linked ? "$" + linked.balance : valueLabel()) + "</b> · " + t("para ", "for ") + escapeHtml(to) +
       " · " + (S.via === "email" ? t("por correo", "by email") : t("por WhatsApp", "by WhatsApp"));
     save();
   }
@@ -239,6 +241,36 @@
       .catch(function (e) { console.error(e); sqReady = null; alertMsg(t("No se pudo cargar el formulario de pago. Recarga la página.", "The payment form couldn't load. Please reload the page.")); });
     return sqReady;
   }
+  function delivered(r) {
+      issued = r;
+      preview();
+      var viaWa = S.via === "whatsapp";
+      var shareTxt = t("¡Tienes una gift card de Nails by MelyG! 💅 ", "You’ve got a Nails by MelyG gift card! 💅 ") + (S.direct ? "" : "") +
+        t("De ", "From ") + S.from.trim() + ": " + r.link;
+      var wa = $("[data-gc-wa]");
+      if (viaWa) {
+        var num = S.contact.replace(/\D/g, ""); if (num.length === 10) num = "1" + num;
+        wa.href = "https://wa.me/" + num + "?text=" + encodeURIComponent(shareTxt);
+        $("[data-gc-wa-label]").textContent = S.direct ? t("Enviársela por WhatsApp", "Send it on WhatsApp") : t("Enviármela por WhatsApp", "Send it to my WhatsApp");
+        wa.hidden = false;
+      } else wa.hidden = true;
+      var mail = $("[data-gc-mail]");
+      mail.hidden = viaWa || r.emailSent;
+      mail.href = "mailto:" + S.contact.trim() + "?subject=" + encodeURIComponent("Gift card · Nails by MelyG") + "&body=" + encodeURIComponent(shareTxt);
+      var view = $("[data-gc-view-link]"); view.href = r.link; view.hidden = false;
+      if (linked) return showDone(t("¡Tu diseño <em>está listo!</em>", "Your design <em>is ready!</em>"),
+        t("Número ", "Number ") + fmtGan(r.gan) + t(" · saldo ", " · balance ") + "$" + r.amount + ". " +
+        (viaWa ? t("Toca el botón para enviarla por WhatsApp con su enlace.", "Tap the button to send it on WhatsApp with its link.")
+          : t("Toca el botón para enviarla por correo con su enlace.", "Tap the button to email it with its link.")) +
+        t(" Quien la abra verá este diseño y el saldo en vivo de Square.", " Whoever opens it sees this design and the live Square balance."));
+      showDone(t("¡Tu gift card <em>está activa!</em>", "Your gift card <em>is active!</em>"),
+        (DEMO ? t("Modo demostración: no se cobró nada y el número es de ejemplo. ", "Demo mode: nothing was charged and the number is a sample. ") : "") +
+        t("Número ", "Number ") + fmtGan(r.gan) + " · $" + r.amount + ". " +
+        (r.emailSent ? t("Ya la envié por correo a ", "I’ve emailed it to ") + S.contact.trim() + "."
+          : viaWa ? t("Toca el botón para enviarla por WhatsApp con su enlace.", "Tap the button to send it on WhatsApp with its link.")
+          : t("Toca el botón para enviarla por correo con su enlace.", "Tap the button to email it with its link.")) +
+        t(" El recibo del pago te llega de Square.", " Square will email you the payment receipt."));
+  }
   function purchase() {
     var btn = form.querySelector('button[type="submit"]');
     btn.disabled = true; alertMsg("");
@@ -265,31 +297,7 @@
           .then(function (res) { return res.json().then(function (j) { if (!res.ok) throw Object.assign(new Error(j.error || "HTTP"), { code: j.code }); return j; }); });
       });
     }
-    return p.then(function (r) {
-      issued = r;
-      preview();
-      var viaWa = S.via === "whatsapp";
-      var shareTxt = t("¡Tienes una gift card de Nails by MelyG! 💅 ", "You’ve got a Nails by MelyG gift card! 💅 ") + (S.direct ? "" : "") +
-        t("De ", "From ") + S.from.trim() + ": " + r.link;
-      var wa = $("[data-gc-wa]");
-      if (viaWa) {
-        var num = S.contact.replace(/\D/g, ""); if (num.length === 10) num = "1" + num;
-        wa.href = "https://wa.me/" + num + "?text=" + encodeURIComponent(shareTxt);
-        $("[data-gc-wa-label]").textContent = S.direct ? t("Enviársela por WhatsApp", "Send it on WhatsApp") : t("Enviármela por WhatsApp", "Send it to my WhatsApp");
-        wa.hidden = false;
-      } else wa.hidden = true;
-      var mail = $("[data-gc-mail]");
-      mail.hidden = viaWa || r.emailSent;
-      mail.href = "mailto:" + S.contact.trim() + "?subject=" + encodeURIComponent("Gift card · Nails by MelyG") + "&body=" + encodeURIComponent(shareTxt);
-      var view = $("[data-gc-view-link]"); view.href = r.link; view.hidden = false;
-      showDone(t("¡Tu gift card <em>está activa!</em>", "Your gift card <em>is active!</em>"),
-        (DEMO ? t("Modo demostración: no se cobró nada y el número es de ejemplo. ", "Demo mode: nothing was charged and the number is a sample. ") : "") +
-        t("Número ", "Number ") + fmtGan(r.gan) + " · $" + r.amount + ". " +
-        (r.emailSent ? t("Ya la envié por correo a ", "I’ve emailed it to ") + S.contact.trim() + "."
-          : viaWa ? t("Toca el botón para enviarla por WhatsApp con su enlace.", "Tap the button to send it on WhatsApp with its link.")
-          : t("Toca el botón para enviarla por correo con su enlace.", "Tap the button to email it with its link.")) +
-        t(" El recibo del pago te llega de Square.", " Square will email you the payment receipt."));
-    }).catch(function (e) {
+    return p.then(delivered).catch(function (e) {
       alertMsg(e.code === "CARD" ? t("La tarjeta fue rechazada. Revisa los datos o prueba con otra.", "The card was declined. Check the details or try another one.")
         : e.code === "GIFT_FAILED" ? t("No se pudo crear la gift card y el cobro se devolvió. Inténtalo de nuevo o escríbeme por WhatsApp.", "The gift card couldn't be created and the charge was refunded. Try again or message me on WhatsApp.")
         : t("No se pudo completar el pago. Inténtalo de nuevo o escríbeme por WhatsApp.", "The payment couldn't be completed. Try again or message me on WhatsApp."));
@@ -299,6 +307,11 @@
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     if (!validate()) return;
+    if (linked) {
+      var d = { g: linked.gan, a: linked.balance, l: "", t: S.to.trim(), f: S.from.trim(), m: S.msg.trim(), th: S.theme, p: S.polish, lang: I.lang };
+      delivered({ gan: linked.gan, amount: linked.balance, emailSent: false, link: location.origin + location.pathname + "?c=" + encodeDesign(d) });
+      return;
+    }
     if (PAY) { purchase(); return; }
     // sin API: pedido por WhatsApp y Mely cobra aparte
     var txt = orderText();
@@ -313,7 +326,7 @@
   });
   $("[data-gc-again]").addEventListener("click", function () {
     code = "MG-" + Math.random().toString(36).slice(2, 6).toUpperCase();
-    S.code = code; S.to = ""; S.msg = ""; S.contact = ""; issued = null;
+    S.code = code; S.to = ""; S.msg = ""; S.contact = ""; issued = null; unlink();
     $("[data-gc-view-link]").hidden = true; alertMsg("");
     form.querySelectorAll(".gc-step, .gc-summary").forEach(function (el) { el.hidden = false; });
     $("[data-gc-done]").hidden = true;
@@ -466,8 +479,49 @@
       var gan = $("[data-gc-bal-input]").value.replace(/\s/g, ""), out = $("[data-gc-bal-out]");
       if (!/^[A-Za-z0-9]{8,20}$/.test(gan)) { out.textContent = t("Escribe el número completo de la tarjeta.", "Enter the full card number."); return; }
       out.textContent = t("Consultando…", "Checking…");
-      checkBalance(gan).then(function (r) { out.innerHTML = stateText(r, "—"); }).catch(function () { out.textContent = t("No se pudo consultar ahora. Inténtalo más tarde.", "Couldn’t check right now. Try again later."); });
+      checkBalance(gan).then(function (r) {
+        out.innerHTML = stateText(r, "—");
+        var bal = r && r.balance === null && DEMO ? 100 : r && r.balance;
+        if (r && r.found && r.state === "ACTIVE" && bal > 0) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "btn gc-link-btn";
+          b.innerHTML = "<span>" + t("Darle mi diseño a esta tarjeta", "Give this card my design") + "</span>";
+          b.addEventListener("click", function () { link(gan, bal); });
+          out.appendChild(b);
+        }
+      }).catch(function () { out.textContent = t("No se pudo consultar ahora. Inténtalo más tarde.", "Couldn’t check right now. Try again later."); });
     });
+  }
+
+  /* ---------- gift cards de Square compradas fuera de la web ----------
+     Se vendió en el salón o en la página de Square: aquí se le pone el diseño
+     de la web. No se cobra nada; el enlace lleva el número y el saldo es el de Square. */
+  function link(gan, balance) {
+    linked = { gan: gan, balance: balance };
+    issued = { gan: gan };
+    document.body.classList.add("is-gc-linked");
+    var bn = $("[data-gc-linked]");
+    bn.querySelector("[data-gc-linked-text]").innerHTML = t("Estás diseñando tu gift card de Square ", "You’re designing your Square gift card ") +
+      "<b>•••• " + escapeHtml(gan.slice(-4)) + "</b>" + t(" · saldo ", " · balance ") + "$" + balance;
+    bn.hidden = false;
+    $("[data-gc-pay]").hidden = true;
+    form.querySelector('button[type="submit"] span').textContent = t("Crear mi diseño", "Create my design");
+    form.querySelector(".gc-summary .note").textContent = t("Tu tarjeta ya está pagada en Square: aquí solo le das el diseño y recibes el enlace para regalarla.", "Your card is already paid in Square: here you just give it a design and get the link to send it.");
+    preview(true);
+    if (window.MELY_LENIS) window.MELY_LENIS.scrollTo(".gc", { offset: -80 }); else $(".gc").scrollIntoView({ behavior: "smooth" });
+  }
+  function unlink() {
+    if (!linked) return;
+    linked = null; issued = null;
+    document.body.classList.remove("is-gc-linked");
+    $("[data-gc-linked]").hidden = true;
+    if (PAY) $("[data-gc-pay]").hidden = false;
+    preview();
+  }
+  $("[data-gc-unlink]").addEventListener("click", unlink);
+  var preGan = (params.get("tarjeta") || "").replace(/\s/g, "");
+  if (/^[A-Za-z0-9]{8,20}$/.test(preGan)) {
+    checkBalance(preGan).then(function (r) { var bal = r && r.balance === null && DEMO ? 100 : r && r.balance; if (r && r.found && r.state === "ACTIVE" && bal > 0) link(preGan, bal); }).catch(function () {});
   }
 
   // paso de pago
@@ -486,7 +540,7 @@
       : t("Al pedirla se abre WhatsApp con todos los datos para mí. Te confirmo el pago y activo tu gift card de Square; no se cobra nada desde esta web.", "Ordering opens WhatsApp with all the details for me. I’ll confirm payment and activate your Square gift card; nothing is charged on this website.");
   }
   var _preview = preview;
-  preview = function (a) { _preview(a); if (!shared) modeTexts(); };
+  preview = function (a) { _preview(a); if (!shared && !linked) modeTexts(); };
 
   render();
   document.addEventListener("langchange", render);

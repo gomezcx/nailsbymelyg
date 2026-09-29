@@ -199,7 +199,7 @@ p { margin: 0 0 1em; }
 .header-cta { display: none; }
 
 @media (min-width: 960px) {
-  .nav { display: flex; }
+  .nav { display: flex; gap: clamp(20px, 2.6vw, 36px); }
   .menu-btn { display: none; }
   .header-cta { display: inline-flex; min-height: 48px; padding: 0 24px; margin-left: 16px; }
 }
@@ -1086,6 +1086,12 @@ p { margin: 0 0 1em; }
 }
 
 /* gift card: pago, vista de quien la recibe y saldo */
+.gc-linked { margin: 0 0 8px; padding: 14px 16px; background: var(--paper-2); border: 1px solid var(--wine-line); border-left: 3px solid var(--wine); font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; }
+.gc-linked[hidden] { display: none; }
+.gc-linked .back-link { font-size: 14px; }
+body.is-gc-linked .gc-form > .gc-step:first-of-type { display: none; }
+.gc-link-btn { margin-top: 14px; }
+.gc-balance .lead { margin-top: 14px; max-width: 460px; }
 .gc-save { border: 0; padding: 20px var(--gutter) 24px; width: min(560px, 100%); max-width: 100%; max-height: 100dvh; background: var(--paper); color: var(--wine); text-align: center; }
 .gc-save::backdrop { background: rgba(30, 12, 16, .6); }
 .gc-save img { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 24px 48px -24px rgba(58,24,32,.6); -webkit-touch-callout: default; user-select: auto; }

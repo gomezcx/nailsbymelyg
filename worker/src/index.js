@@ -87,7 +87,8 @@ export default {
       if (request.method === "POST" && url.pathname === "/confirm/answer") return json(await confirmAnswer(env, await body(request), ctx), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/run") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
-        return json(await autoCancelUnconfirmed(env, { dry: url.searchParams.has("dry") }), 200, cors);
+        const dry = url.searchParams.has("dry"); // ?now= solo para simular en modo prueba
+        return json(await autoCancelUnconfirmed(env, { dry, now: dry ? url.searchParams.get("now") || undefined : undefined }), 200, cors);
       }
       if (request.method === "POST" && url.pathname === "/reminders/run") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);

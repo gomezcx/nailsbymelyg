@@ -47,5 +47,29 @@ Haz commit y push. Listo.
 | `GET /services` | Catalog `search-catalog-items` (servicios de citas; caché de 10 min) |
 | `POST /availability` | Bookings `availability/search` (hasta 31 días) |
 | `POST /book` | Vuelve a comprobar el hueco → Customers (busca por correo o crea) → Cards (tarjeta de garantía) → Bookings `create` |
+| `POST /giftcard/purchase` | Payments (cobro) → Gift Cards `create` (DIGITAL) → Gift Card Activities `ACTIVATE`. Si falla la activación → Refunds |
+| `GET /giftcard/balance?gan=` | Gift Cards `from-gan` (estado y saldo) |
 
 Los errores quedan en `wrangler tail`.
+
+## Gift cards con Square
+
+Con el Worker conectado, `giftcard.html` cobra con el formulario de Square y crea una **gift card digital real de Square** por ese valor:
+
+- **Square guarda el saldo.** En el salón, Mely la cobra desde el Punto de Venta de Square con el número de la tarjeta; Square descuenta el saldo y no deja usarla de más. Lo que sobra queda para la próxima.
+- **El diseño es de la web.** Colores, esmalte, nombres y mensaje viajan en el enlace de la tarjeta (`giftcard.html?c=…`). Quien la abre ve su tarjeta personalizada y el **saldo en vivo, consultado a Square**. Si alguien falsifica un diseño o un número, sale "no encontrada".
+- **Si el cobro pasa pero la tarjeta no se puede crear, el Worker devuelve el dinero automáticamente.**
+- **Entrega:** por WhatsApp, la web abre el chat con el enlace listo para enviar. Por correo, si está configurado Resend (abajo), el Worker lo manda solo; si no, se abre el correo de la persona con el enlace listo.
+
+### Activarlo
+
+1. En Square, revisa que la cuenta pueda vender **gift cards** (Square › Gift Cards). En la app de desarrollador, la aplicación necesita los permisos de *Payments* y *Gift Cards*.
+2. Prueba primero en **sandbox** con `?demo=1` quitado y `SQUARE_ENV = "sandbox"`: paga con una tarjeta de prueba de Square y comprueba que la gift card aparece en el panel de Square con su saldo.
+3. (Opcional) Correo automático con [Resend](https://resend.com): verifica el dominio y luego:
+   ```bash
+   wrangler secret put RESEND_API_KEY
+   ```
+   y en `wrangler.toml` pon `MAIL_FROM` (ej. `Nails by MelyG <giftcards@nailsbymelyg.com>`) y `NOTIFY_EMAIL` (el correo de Mely, para que le llegue un aviso de cada venta).
+
+Mientras el Worker no esté conectado, la página funciona igual pero el pedido llega a Mely por WhatsApp y ella activa la tarjeta a mano en Square. Para enseñárselo sin cobrar: `giftcard.html?demo=1`.
+

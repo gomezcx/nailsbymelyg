@@ -9,7 +9,7 @@ HTML/CSS/JS sin frameworks ni build, publicada con GitHub Pages. Bilingüe ES/EN
 |---|---|
 | `index.html` | Inicio: técnica, servicios destacados, estudio de color, fichas del look, cursos, sobre Mely, reseñas, horario y mapa |
 | `galeria.html` | Galería de trabajos con filtros por estilo y visor a pantalla completa (fotos en `assets/js/gallery.js`) |
-| `giftcard.html` | Diseñador de gift cards: monto o servicio, diseño, mensaje y entrega por WhatsApp o correo. El pedido llega a Mely por WhatsApp (lógica en `assets/js/giftcard.js`) |
+| `giftcard.html` | Gift cards de Square con diseño personalizado: se paga con Square, se crea una gift card real y se entrega por WhatsApp o correo con su enlace (`?c=…` muestra la tarjeta y el saldo en vivo). Sin Worker, el pedido llega por WhatsApp. Demo: `giftcard.html?demo=1` |
 | `servicios.html` | Menú completo con precios (sale de `assets/js/data.js`), políticas y FAQ |
 | `cursos.html` | Manicura rusa y Gel‑X ($550 cada uno, máx. 6 cupos). Fechas por WhatsApp |
 | `reservar.html` | Reserva propia en 4 pasos conectada a Square |
@@ -51,7 +51,7 @@ Para activar el modo conectado, sigue [`worker/README.md`](worker/README.md).
 
 ## Pendiente
 
-- [ ] Gift cards: hoy el pedido llega por WhatsApp y Mely cobra a mano. Si quiere que se paguen en la web, se puede conectar Square Gift Cards a través del Worker. Si pone su correo en `config.js` (`email`), también aparece la opción de mandar el pedido por correo.
+- [ ] Gift cards: conectar el Worker (ver `worker/README.md` › Gift cards con Square) y probar en sandbox. Hasta entonces el pedido llega por WhatsApp.
 
 - [ ] En Square la ubicación sigue siendo **25450 Farmstead Prairie Pl, Katy 77493**. Hay que cambiarla a 2727 N Mason Rd, Suite 301 (Square › Settings › Locations), porque sale en los correos de confirmación.
 - [ ] En Square el horario (L–V 10–5:15, S 8:30–3, D 10–4) no coincide con Google Maps (L–S 9–6, D 11–3). La reserva en línea usa el de Square: hay que igualarlos.

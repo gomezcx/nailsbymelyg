@@ -72,7 +72,7 @@
 </div>
 
 <main id="main">
-  <section class="page-hero gc-hero">
+  <section class="page-hero gc-hero" data-gc-hero>
     <div class="wrap">
       <p class="eyebrow" data-i18n="gc.eyebrow">Gift cards</p>
       <h1 data-i18n="gc.h1">Regala <em>uñas que inspiran</em></h1>
@@ -142,6 +142,14 @@
           <label class="check"><input type="checkbox" data-gc-direct> <span data-i18n="gc.direct">Enviarla directamente a la persona que la recibe (en ese caso, escribe su contacto)</span></label>
         </fieldset>
 
+        <fieldset class="gc-step" data-gc-pay hidden>
+          <legend><span class="n">05</span> <span data-i18n="gc.s5">Pago seguro con Square</span></legend>
+          <label class="field"><span class="label" data-i18n="gc.buyerEmail">Tu correo (para el recibo)</span><input data-gc-in="buyerEmail" type="email" autocomplete="email" placeholder="tu@correo.com"><span class="err" data-i18n="bk.emailErr">Escribe un correo válido.</span></label>
+          <div class="card-box gc-card-box" id="gc-card-container"></div>
+          <p class="note" data-i18n="gc.payNote">El pago lo procesa Square; esta web nunca ve los datos de tu tarjeta. Al pagar se crea una gift card real de Square por ese valor: el saldo lo guarda Square y solo se puede usar hasta agotarlo.</p>
+          <p class="alert" data-gc-alert role="alert" hidden></p>
+        </fieldset>
+
         <div class="gc-summary" aria-live="polite">
           <p data-gc-summary></p>
           <div class="step-actions">
@@ -153,14 +161,46 @@
         </div>
 
         <div class="gc-done" data-gc-done hidden tabindex="-1">
-          <h2 data-i18n="gc.doneH">¡Tu gift card <em>está en camino!</em></h2>
-          <p class="lead" data-i18n="gc.doneP">Si WhatsApp no se abrió, toca el botón de abajo. En cuanto me escribas te confirmo el pago y la envío.</p>
+          <h2 data-gc-done-title></h2>
+          <p class="lead" data-gc-done-text></p>
           <div class="step-actions">
-            <a class="btn" data-gc-wa href="#" target="_blank" rel="noopener"><span data-i18n="gc.open">Abrir WhatsApp</span></a>
+            <a class="btn" data-gc-wa href="#" target="_blank" rel="noopener"><span data-gc-wa-label>WhatsApp</span></a>
             <a class="btn btn--ghost" data-gc-mail href="#" hidden><span data-i18n="gc.mail">Enviar por correo</span></a>
+            <a class="btn btn--ghost" data-gc-view-link href="#" target="_blank" rel="noopener" hidden><span data-i18n="gc.viewCard">Ver la tarjeta</span></a>
+          </div>
+          <div class="step-actions">
+            <button class="back-link" type="button" data-gc-download2 data-i18n="gc.download">Descargar diseño</button>
             <button class="back-link" type="button" data-gc-again data-i18n="gc.again">Diseñar otra</button>
           </div>
         </div>
+      </form>
+
+      <div class="gc-viewer" data-gc-viewer hidden>
+        <p class="eyebrow" data-i18n="gc.vEyebrow">Tu gift card</p>
+        <h2 data-gc-v-title></h2>
+        <p class="gc-status" data-gc-status aria-live="polite"></p>
+        <ol class="gc-howto">
+          <li data-i18n="gc.how1">Reserva tu cita en la web o por WhatsApp.</li>
+          <li data-i18n="gc.how2">En tu cita, muestra esta tarjeta o di tu número.</li>
+          <li data-i18n="gc.how3">La cobro desde Square: el saldo se descuenta solo y lo que sobre queda para la próxima.</li>
+        </ol>
+        <div class="step-actions">
+          <a class="btn" href="reservar.html" data-magnetic><span data-i18n="cta.book">Reservar cita</span></a>
+          <button class="back-link" type="button" data-gc-download3 data-i18n="gc.download">Descargar diseño</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section on-white gc-balance" data-gc-balance hidden aria-labelledby="bal-title">
+    <div class="wrap gc-balance-inner">
+      <div>
+        <p class="eyebrow" data-i18n="gc.balEyebrow">¿Ya tienes una?</p>
+        <h2 id="bal-title" data-i18n="gc.balH">Consulta <em>tu saldo</em></h2>
+      </div>
+      <form class="gc-bal-form" data-gc-bal-form novalidate>
+        <label class="field"><span class="label" data-i18n="gc.balL">Número de la gift card</span><input data-gc-bal-input inputmode="numeric" autocomplete="off" placeholder="7783 3200 0000 0000"></label>
+        <button class="btn" type="submit"><span data-i18n="gc.balBtn">Consultar</span></button>
+        <p class="gc-bal-out" data-gc-bal-out aria-live="polite"></p>
       </form>
     </div>
   </section>

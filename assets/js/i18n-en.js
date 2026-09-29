@@ -327,5 +327,17 @@ window.MELY_EN = {
   "gc.doneP": "If WhatsApp didn’t open, tap the button below. As soon as you message me I’ll confirm payment and send it.",
   "gc.open": "Open WhatsApp",
   "gc.mail": "Send by email",
-  "gc.again": "Design another"
+  "gc.again": "Design another",
+  "gc.s5": "Secure payment with Square",
+  "gc.buyerEmail": "Your email (for the receipt)",
+  "gc.payNote": "Payment is processed by Square; this website never sees your card details. Paying creates a real Square gift card for that amount: Square keeps the balance and it can only be used until it runs out.",
+  "gc.viewCard": "View the card",
+  "gc.vEyebrow": "Your gift card",
+  "gc.how1": "Book your appointment on the website or on WhatsApp.",
+  "gc.how2": "At your appointment, show this card or tell me your number.",
+  "gc.how3": "I charge it through Square: the balance is deducted automatically and anything left stays for next time.",
+  "gc.balEyebrow": "Already have one?",
+  "gc.balH": "Check <em>your balance</em>",
+  "gc.balL": "Gift card number",
+  "gc.balBtn": "Check"
 };

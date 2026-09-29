@@ -6,6 +6,11 @@ compatibility_date = "2025-06-01"
 SQUARE_ENV = "production"            # "sandbox" para probar
 SQUARE_LOCATION_ID = ""              # Square Developer › Locations
 ALLOWED_ORIGINS = "https://nailsbymelyg.com,https://www.nailsbymelyg.com"
+SITE_URL = "https://nailsbymelyg.com"
+# Opcional: correo de las gift cards con Resend (resend.com). La clave va como secreto:
+#   npx wrangler secret put RESEND_API_KEY
+MAIL_FROM = ""                       # ej. "Nails by MelyG <giftcards@nailsbymelyg.com>"
+NOTIFY_EMAIL = ""                    # correo de Mely para avisarle de cada venta
 
 # El token NO va aquí. Se guarda como secreto:
 #   npx wrangler secret put SQUARE_ACCESS_TOKEN

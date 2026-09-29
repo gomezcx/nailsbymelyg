@@ -4,6 +4,12 @@
    Mientras apiBase esté vacío, la web funciona igual pero el
    último paso de la reserva manda a la página de Square.
    ============================================================ */
+// "nailsbymelyg.com." (con punto final) → "nailsbymelyg.com": mismo sitio, pero el
+// navegador lo trata como otro dominio y la agenda de Square lo rechazaría.
+if (/\.$/.test(location.hostname)) {
+  location.replace(location.href.replace(location.hostname, location.hostname.replace(/\.$/, "")));
+}
+
 window.MELY_CONFIG = {
   // URL del Worker de Cloudflare (ver /worker/README.md). Ej: "https://api.nailsbymelyg.com"
   apiBase: "https://nailsbymelyg-api.nailsbymelyg.workers.dev",

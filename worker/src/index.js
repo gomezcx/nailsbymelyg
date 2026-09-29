@@ -31,9 +31,12 @@ export default {
 
   async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
-    const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const allowedList = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
+    // "https://nailsbymelyg.com." (con punto final) es el mismo dominio: se acepta igual
+    const allowed = { includes: (o) => allowedList.includes(String(o).replace(/\.(:\d+)?$/, "$1")) };
+    allowed[0] = allowedList[0];
     const cors = {
-      "Access-Control-Allow-Origin": allowed.includes(origin) ? origin : allowed[0] || "",
+      "Access-Control-Allow-Origin": allowed.includes(origin) ? origin : allowedList[0] || "",
       "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Max-Age": "86400",

@@ -1217,3 +1217,9 @@ html { overflow-x: clip; }
 /* reservar: los cursos junto a los servicios */
 .bk-courses { margin: 36px 0 0; }
 .bk-courses a.svc { text-decoration: none; color: inherit; }
+.cb-dates { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.cb-date { position: relative; display: grid; gap: 2px; padding: 12px 14px; }
+.cb-wd { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+.cb-date b { font-size: 17px; }
+.cb-n { position: absolute; top: 8px; right: 10px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; background: var(--on-wine); color: var(--wine); }
+#cb-hours b { color: var(--wine); font-weight: 600; }

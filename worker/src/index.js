@@ -844,28 +844,20 @@ function localParts(iso, tz) {
   return { date: p.year + "-" + p.month + "-" + p.day, time: p.hour + ":" + p.minute };
 }
 
-async function courseDays(env, v, c, from, to) {
+// días con la jornada del curso libre entera (cada día por separado; la alumna elige cuáles)
+async function courseFreeDays(env, v, from, to) {
   const tz = env.TIMEZONE || TZ_DEFAULT;
   const list = await searchAvailability(env, [v.id], from.toISOString(), to.toISOString());
   const byDay = {};
   for (const a of list) { const l = localParts(a.start_at, tz); if (l.time === COURSE_START && !byDay[l.date]) byDay[l.date] = a; }
-  // el 2.º día (curso ruso) es el siguiente día libre completo, como mucho a 7 días del primero
-  const sorted = Object.keys(byDay).sort(), out = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const days = [byDay[sorted[i]]];
-    for (let j = i + 1; j < sorted.length && days.length < c.days; j++) {
-      if ((Date.parse(sorted[j]) - Date.parse(sorted[i])) / 864e5 <= 7) days.push(byDay[sorted[j]]);
-    }
-    if (days.length === c.days) out.push({ date: sorted[i], slots: days });
-  }
-  return out;
+  return byDay;
 }
 
 async function courseAvailability(env, b, ctx) {
   const { c, v } = await courseVariation(env, ctx, b.course);
   const from = new Date(Date.now() + 48 * 3600e3); // con 2 días de margen para preparar el kit
-  const days = await courseDays(env, v, c, from, new Date(from.getTime() + 31 * 864e5));
-  return { days: days.map((x) => ({ date: x.date, dates: x.slots.map((s) => s.start_at) })), price: c.price, deposit: c.price / 2, daysPerCourse: c.days };
+  const byDay = await courseFreeDays(env, v, from, new Date(from.getTime() + 31 * 864e5));
+  return { days: Object.keys(byDay).sort().map((date) => ({ date, start: byDay[date].start_at })), price: c.price, deposit: c.price / 2, daysPerCourse: c.days };
 }
 
 async function findOrCreateCustomer(env, cu, idem) {
@@ -882,15 +874,18 @@ async function courseBook(env, b, ctx) {
   if (!cu.given || !cu.family) throw bad("Name required");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cu.email)) throw bad("Invalid email");
   if (!/^\+\d{10,15}$/.test(cu.phone)) throw bad("Invalid phone");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date || "")) throw bad("Invalid date");
+  const dates = (Array.isArray(b.dates) ? b.dates : [b.date]).map(String).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
   if (!b.cardToken) throw Object.assign(bad("Card required"), { code: "CARD" });
   const idem = clean(b.idempotencyKey, 40) || crypto.randomUUID();
   const { c, v } = await courseVariation(env, ctx, b.course);
+  if (dates.length !== c.days || new Set(dates).size !== c.days) throw bad("Invalid dates");
 
   // ¿siguen libres esos días? (lo que diga Square)
-  const from = new Date(Date.parse(b.date + "T00:00:00Z") - 864e5);
-  const pick = (await courseDays(env, v, c, from, new Date(from.getTime() + (c.days + 2) * 864e5))).find((x) => x.date === b.date);
-  if (!pick) { const e = new Error("Slot taken"); e.status = 409; e.code = "SLOT_TAKEN"; e.public = "Slot taken"; throw e; }
+  const from = new Date(Date.parse(dates[0] + "T00:00:00Z") - 864e5);
+  const to = new Date(Date.parse(dates[dates.length - 1] + "T00:00:00Z") + 2 * 864e5);
+  const byDay = await courseFreeDays(env, v, from, to);
+  if (!dates.every((d) => byDay[d])) { const e = new Error("Slot taken"); e.status = 409; e.code = "SLOT_TAKEN"; e.public = "Slot taken"; throw e; }
+  const pick = { slots: dates.map((d) => byDay[d]) };
 
   const customerId = await findOrCreateCustomer(env, cu, idem);
   let cardId;

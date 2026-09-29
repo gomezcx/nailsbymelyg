@@ -22,7 +22,7 @@
     gelx: { days: 1, es: ["Gel‑X", "1 día · aplicación, forma y retirada correcta"], en: ["Gel‑X", "1 day · application, shaping and safe removal"] }
   };
   var PRICE = (window.MELY_DATA && window.MELY_DATA.courses && window.MELY_DATA.courses.russian.price) || 550;
-  var S = { course: COURSES[params.get("curso")] ? params.get("curso") : "russian", days: null, pick: null, busy: false };
+  var S = { course: COURSES[params.get("curso")] ? params.get("curso") : "russian", days: null, sel: [], busy: false };
   var card = null, cardReady = null;
 
   function post(path, body) {
@@ -43,21 +43,24 @@
       var c = COURSES[k][I.lang];
       return '<label class="svc"><input type="radio" name="course" value="' + k + '"' + (S.course === k ? " checked" : "") + "><b>" + c[0] + '</b><span class="p">$' + PRICE + '</span><span class="d">' + c[1] + "</span></label>";
     }).join("");
-    $("#cb-hours").textContent = t("Horario: 9:00 a. m. – 5:00 p. m. (hora de Houston). Solo aparecen los días que tengo libres completos", "Hours: 9:00 a.m. – 5:00 p.m. (Houston time). Only days I have fully free are shown") +
-      (COURSES[S.course].days > 1 ? t("; los dos días del curso quedan como mucho a una semana.", "; the two course days are at most a week apart.") : ".");
+    hoursText();
     payText();
   }
-  $("#cb-courses").addEventListener("change", function (e) { if (e.target.name === "course") { S.course = e.target.value; S.pick = null; loadDays(); payText(); } });
+  function need() { return COURSES[S.course].days; }
+  function hoursText() {
+    var n = need(), left = n - S.sel.length;
+    $("#cb-hours").innerHTML = t("Horario de clase: de 9:00 a. m. a 5:00 p. m. (hora de Texas). Estos son los días que tengo libres completos. ", "Class hours: 9:00 a.m. to 5:00 p.m. (Texas time). These are the days I have fully free. ") +
+      "<b>" + (n > 1
+        ? (left > 0 ? t("Elige " + left + (left === 1 ? " día más." : " días, los que tú quieras."), "Choose " + left + (left === 1 ? " more day." : " days, whichever you like.")) : t("¡Listo! Ya elegiste tus 2 días.", "Done! You chose your 2 days."))
+        : (left > 0 ? t("Elige tu día.", "Choose your day.") : t("¡Listo! Ya elegiste tu día.", "Done! You chose your day."))) + "</b>";
+  }
+  $("#cb-courses").addEventListener("change", function (e) { if (e.target.name === "course") { S.course = e.target.value; S.sel = []; loadDays(); hoursText(); payText(); } });
 
-  /* ---------- 2 · fecha ---------- */
+  /* ---------- 2 · fecha: la alumna elige sus días ---------- */
   function demoDays() {
     var out = [], d = new Date(); d.setDate(d.getDate() + 3);
     while (out.length < 8) {
-      if (d.getDay() !== 0 && (COURSES[S.course].days === 1 || d.getDay() !== 6)) {
-        var a = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 14)), dates = [a.toISOString()];
-        if (COURSES[S.course].days === 2) dates.push(new Date(a.getTime() + 864e5).toISOString());
-        out.push({ date: a.toISOString().slice(0, 10), dates: dates });
-      }
+      if (d.getDay() !== 0) { var a = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 14)); out.push({ date: a.toISOString().slice(0, 10), start: a.toISOString() }); }
       d.setDate(d.getDate() + (out.length % 3 ? 1 : 3));
     }
     return Promise.resolve({ days: out });
@@ -70,36 +73,44 @@
     p.then(function (r) {
       if (mine !== S.course) return;
       S.days = r.days || [];
-      if (!S.days.length) {
-        box.innerHTML = '<p class="note">' + t("No tengo días completos libres en las próximas semanas. Escríbeme por WhatsApp y buscamos una fecha.", "I don't have full free days in the next few weeks. Message me on WhatsApp and we'll find a date.") + "</p>";
+      if (S.days.length < need()) {
+        box.innerHTML = '<p class="note">' + t("Ahora mismo no tengo suficientes días libres completos. Escríbeme por WhatsApp y buscamos la fecha juntas.", "Right now I don't have enough fully free days. Message me on WhatsApp and we'll find a date together.") + "</p>";
         return;
       }
-      box.innerHTML = "";
-      S.days.forEach(function (d, i) {
-        var b = document.createElement("button");
-        b.type = "button"; b.className = "slot cb-date"; b.dataset.i = i;
-        b.innerHTML = "<b>" + datesLabel(d.dates, false) + "</b>";
-        b.setAttribute("aria-pressed", S.pick && S.pick.date === d.date ? "true" : "false");
-        box.appendChild(b);
-      });
+      renderDays();
     }).catch(function () {
       box.innerHTML = '<p class="note">' + t("No pude cargar mi agenda ahora. Recarga la página o escríbeme por WhatsApp.", "I couldn't load my schedule right now. Reload the page or message me on WhatsApp.") + "</p>";
     });
   }
+  function renderDays() {
+    var box = $("#cb-dates"), picked = S.sel.map(function (x) { return x.date; });
+    box.innerHTML = "";
+    S.days.forEach(function (d, i) {
+      var b = document.createElement("button"), on = picked.indexOf(d.date) > -1;
+      b.type = "button"; b.className = "slot cb-date"; b.dataset.i = i;
+      b.innerHTML = '<span class="cb-wd">' + fmt(d.start, { weekday: "long" }) + "</span><b>" + fmt(d.start, { day: "numeric", month: "long" }) + "</b>" +
+        (on && need() > 1 ? '<span class="cb-n">' + t("Día ", "Day ") + (S.sel.slice().sort(function (a, c) { return a.date < c.date ? -1 : 1; }).map(function (x) { return x.date; }).indexOf(d.date) + 1) + "</span>" : "");
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      box.appendChild(b);
+    });
+  }
   $("#cb-dates").addEventListener("click", function (e) {
     var b = e.target.closest(".cb-date"); if (!b) return;
-    S.pick = S.days[+b.dataset.i];
-    document.querySelectorAll(".cb-date").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
-    payText();
-    initCard();
+    var d = S.days[+b.dataset.i], at = S.sel.map(function (x) { return x.date; }).indexOf(d.date);
+    if (at > -1) S.sel.splice(at, 1);                       // tocar otra vez: se quita
+    else if (need() === 1) S.sel = [d];                      // Gel-X: cambia de día
+    else { if (S.sel.length >= need()) S.sel.shift(); S.sel.push(d); } // ruso: se queda con los 2 últimos
+    renderDays(); hoursText(); payText();
+    if (S.sel.length === need()) initCard();
   });
+  function picked() { return S.sel.length === need() ? S.sel.slice().sort(function (a, c) { return a.date < c.date ? -1 : 1; }) : null; }
 
   /* ---------- 3 · datos + pago ---------- */
   function payText() {
     var half = PRICE / 2;
     $("#cb-pay").innerHTML = "<p><b>" + t("Hoy pagas $", "Today you pay $") + half + "</b> " + t("(50 %) para apartar tu fecha.", "(50 %) to hold your date.") + "</p>" +
       "<p>" + t("Los otros $", "The other $") + half + t(" se cobran solos a la misma tarjeta al terminar el curso.", " are charged automatically to the same card when the course ends.") + "</p>" +
-      (S.pick ? '<p class="cb-pick">' + COURSES[S.course][I.lang][0] + " · " + datesLabel(S.pick.dates, true) + "</p>" : "");
+      (picked() ? '<p class="cb-pick">' + COURSES[S.course][I.lang][0] + " · " + datesLabel(picked().map(function (x) { return x.start; }), true) + "</p>" : "");
     $("#cb-submit span").textContent = t("Pagar $", "Pay $") + half + t(" e inscribirme", " and enroll");
   }
   function initCard() {
@@ -124,7 +135,7 @@
     mark("#c-family", $("#c-family").value.trim().length > 0);
     mark("#c-phone", $("#c-phone").value.replace(/\D/g, "").length >= 10);
     mark("#c-email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#c-email").value.trim()));
-    if (ok && !S.pick) { ok = false; alertMsg(t("Elige la fecha de tu curso.", "Pick your course date.")); }
+    if (ok && !picked()) { ok = false; alertMsg(need() > 1 ? t("Elige los 2 días de tu curso.", "Pick the 2 days of your course.") : t("Elige el día de tu curso.", "Pick your course day.")); }
     if (ok && !$("#c-policy").checked) { ok = false; $("#c-policy").focus(); alertMsg(t("Acepta las condiciones de pago para continuar.", "Please accept the payment terms to continue.")); }
     return ok;
   }
@@ -139,13 +150,13 @@
     var btn = $("#cb-submit"), label = btn.querySelector("span");
     S.busy = true; btn.disabled = true; label.textContent = t("Procesando…", "Processing…");
     var customer = { givenName: $("#c-given").value.trim(), familyName: $("#c-family").value.trim(), phone: e164($("#c-phone").value), email: $("#c-email").value.trim() };
-    var p = DEMO ? new Promise(function (r) { setTimeout(function () { r({ dates: S.pick.dates, paid: PRICE / 2, remaining: PRICE / 2 }); }, 900); }) :
+    var p = DEMO ? new Promise(function (r) { setTimeout(function () { r({ dates: picked().map(function (x) { return x.start; }), paid: PRICE / 2, remaining: PRICE / 2 }); }, 900); }) :
       Promise.resolve(cardReady).then(function () {
         if (!card) throw Object.assign(new Error("form"), { code: "CARD" });
         return card.tokenize();
       }).then(function (r) {
         if (r.status !== "OK") throw Object.assign(new Error("card"), { code: "CARD" });
-        return post("/course/book", { idempotencyKey: uid(), course: S.course, date: S.pick.date, customer: customer, cardToken: r.token, lang: I.lang });
+        return post("/course/book", { idempotencyKey: uid(), course: S.course, dates: picked().map(function (x) { return x.date; }), customer: customer, cardToken: r.token, lang: I.lang });
       });
     p.then(function (r) {
       done(customer.givenName, r);
@@ -154,7 +165,7 @@
       alertMsg(err.code === "CARD" ? t("La tarjeta fue rechazada. Revisa los datos o prueba con otra.", "The card was declined. Check the details or try another one.")
         : err.code === "SLOT_TAKEN" ? t("Esa fecha se acaba de ocupar (no se te cobró nada). Elige otra, por favor.", "That date was just taken (you weren't charged). Please pick another.")
         : t("No se pudo completar la inscripción. Inténtalo de nuevo o escríbeme por WhatsApp.", "The enrollment couldn't be completed. Try again or message me on WhatsApp."));
-      if (err.code === "SLOT_TAKEN") { S.pick = null; loadDays(); payText(); }
+      if (err.code === "SLOT_TAKEN") { S.sel = []; loadDays(); hoursText(); payText(); }
     }).then(function () { S.busy = false; btn.disabled = false; payText(); });
   });
 
@@ -163,7 +174,7 @@
     $("#cb-t-hi").innerHTML = name.replace(/[&<>"]/g, "") + t(", te espero <em>en clase</em>", ", see you <em>in class</em>");
     $("#cb-t-msg").textContent = t("Qué ilusión enseñarte. Ven con ganas de aprender y sin prisa: tu kit y tu mesa te estarán esperando.", "I'm so excited to teach you. Come ready to learn and relaxed: your kit and your table will be waiting for you.");
     $("#cb-t-what").textContent = c[0];
-    $("#cb-t-when").textContent = datesLabel(r.dates || S.pick.dates, true) + " · 9:00 a. m. – 5:00 p. m.";
+    $("#cb-t-when").textContent = datesLabel(r.dates, true) + t(" · de 9:00 a. m. a 5:00 p. m.", " · 9:00 a.m. to 5:00 p.m.");
     $("#cb-t-paid").textContent = "$" + r.paid + t(" pagado · $", " paid · $") + r.remaining + t(" al terminar", " when it ends");
     var rc = $("#cb-receipt"); if (r.receiptUrl) { rc.href = r.receiptUrl; rc.hidden = false; }
     root.hidden = true;

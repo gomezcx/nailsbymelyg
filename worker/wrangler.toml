@@ -20,8 +20,16 @@ ADDRESS = "2727 N Mason Rd, Suite 301, Katy, TX 77449"
 MAPS_URL = "https://maps.app.goo.gl/jeEr8PQE1xyBjdHz8"
 # Para lanzarlos a mano y probar: npx wrangler secret put ADMIN_KEY
 
+# Confirmación de asistencia: "1" cancela 1 h antes las citas sin confirmar (reservadas con +24 h). "0" lo apaga.
+REQUIRE_CONFIRM = "1"
+CONFIRM_SINCE = "2026-09-29T17:16:00Z"   # solo citas reservadas desde aquí (las anteriores nunca se cancelan solas)
+
+[[kv_namespaces]]
+binding = "WAITLIST"
+id = "cf02df51af0c495d876e4f7d11ad2395"
+
 [triggers]
-crons = ["0 * * * *"]                # cada hora en punto
+crons = ["*/15 * * * *"]             # cada 15 min (recordatorios solo en la hora en punto)
 
 # El token NO va aquí. Se guarda como secreto:
 #   npx wrangler secret put SQUARE_ACCESS_TOKEN

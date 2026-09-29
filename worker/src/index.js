@@ -25,8 +25,11 @@ const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 
 export default {
   // cron: cada hora busca las citas que empiezan dentro de REMINDER_HOURS y avisa
+  // cron cada 15 min: recordatorios (solo en la hora en punto) y cancelación de citas sin confirmar
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runReminders(env, { now: event.scheduledTime }).catch((e) => console.error("REMINDERS", e.stack || e, e.details ? JSON.stringify(e.details) : "")));
+    const log = (tag) => (e) => console.error(tag, e.stack || e, e.details ? JSON.stringify(e.details) : "");
+    if (new Date(event.scheduledTime).getUTCMinutes() < 15) ctx.waitUntil(runReminders(env, { now: event.scheduledTime }).catch(log("REMINDERS")));
+    ctx.waitUntil(autoCancelUnconfirmed(env, { now: event.scheduledTime }).catch(log("AUTOCANCEL")));
   },
 
   async fetch(request, env, ctx) {
@@ -51,6 +54,13 @@ export default {
       if (request.method === "POST" && url.pathname === "/availability") return json(await availability(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/book") return json(await book(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/giftcard/purchase") return json(await giftPurchase(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/waitlist") return json(await waitlistJoin(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/confirm/lookup") return json(await confirmLookup(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/confirm/answer") return json(await confirmAnswer(env, await body(request), ctx), 200, cors);
+      if (request.method === "POST" && url.pathname === "/confirm/run") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        return json(await autoCancelUnconfirmed(env, { dry: url.searchParams.has("dry") }), 200, cors);
+      }
       if (request.method === "POST" && url.pathname === "/reminders/run") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
         return json(await runReminders(env, {
@@ -346,6 +356,167 @@ function b64url(str) {
   let bin = "";
   bytes.forEach((b) => { bin += String.fromCharCode(b); });
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/* ---------------- Confirmación de asistencia ---------------- */
+// La clienta confirma en nailsbymelyg.com/confirmar.html (enlace del SMS de Square).
+// Confirmar → nota "✅ Confirmada" en la cita de Square. Si 1 h antes no confirmó
+// (y reservó con más de 24 h), se cancela y se avisa a la lista de espera.
+
+const CONFIRM_MARK = "✅ Confirmada por la clienta";
+const TZ_DEFAULT = "America/Chicago";
+
+function e164(phone) {
+  const d = String(phone || "").replace(/\D/g, "");
+  if (d.length === 10) return "+1" + d;
+  if (d.length === 11 && d[0] === "1") return "+" + d;
+  return null;
+}
+
+async function hmac(env, data) {
+  const secret = env.CONFIRM_SECRET || env.ADMIN_KEY;
+  if (!secret) throw new Error("Falta CONFIRM_SECRET");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return b64url(String.fromCharCode(...new Uint8Array(sig))).slice(0, 32);
+}
+async function makeToken(env, bookingId) {
+  const exp = Date.now() + 3 * 864e5;
+  const data = bookingId + "." + exp;
+  return data + "." + (await hmac(env, data));
+}
+async function readToken(env, token) {
+  const [id, exp, sig] = String(token || "").split(".");
+  if (!id || !exp || !sig || Date.now() > +exp) throw bad("Invalid token");
+  if ((await hmac(env, id + "." + exp)) !== sig) throw bad("Invalid token");
+  return id;
+}
+
+async function bookingSummary(env, b, en) {
+  const info = await reminderInfo(env, b);
+  return { id: b.id, when: info.when, date: info.date, time: info.time, services: info.services, name: info.name,
+    confirmed: String(b.seller_note || "").includes(CONFIRM_MARK), status: b.status, start: b.start_at };
+}
+
+async function confirmLookup(env, b) {
+  const phone = e164(b.phone);
+  const check = String(b.check || "").trim().toLowerCase();
+  if (!phone || check.length < 2) throw bad("Invalid data");
+  const found = await sq(env, "/v2/customers/search", { query: { filter: { phone_number: { exact: phone } } }, limit: 10 });
+  const now = Date.now();
+  const out = [];
+  for (const c of found.customers || []) {
+    // segunda comprobación: correo o nombre, para que nadie vea citas ajenas con solo un teléfono
+    const email = String(c.email_address || "").toLowerCase(), name = String(c.given_name || "").toLowerCase();
+    if (!(email && email === check) && !(name && name.startsWith(check))) continue;
+    const q = new URLSearchParams({ customer_id: c.id, location_id: env.SQUARE_LOCATION_ID,
+      start_at_min: new Date(now).toISOString(), start_at_max: new Date(now + 31 * 864e5).toISOString(), limit: "20" });
+    const r = await sq(env, "/v2/bookings?" + q.toString());
+    for (const bk of r.bookings || []) {
+      if (bk.status !== "ACCEPTED" && bk.status !== "PENDING") continue;
+      out.push(Object.assign(await bookingSummary(env, bk), { token: await makeToken(env, bk.id) }));
+    }
+  }
+  out.sort((a, b2) => Date.parse(a.start) - Date.parse(b2.start));
+  return { bookings: out.slice(0, 5) };
+}
+
+async function confirmAnswer(env, b, ctx) {
+  const id = await readToken(env, b.token);
+  const bk = (await sq(env, "/v2/bookings/" + id)).booking;
+  if (bk.status !== "ACCEPTED" && bk.status !== "PENDING") return { status: "already_cancelled" };
+  if (b.answer === "yes") {
+    if (!String(bk.seller_note || "").includes(CONFIRM_MARK)) {
+      const note = ((bk.seller_note ? bk.seller_note + "\n" : "") + CONFIRM_MARK + " (" + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC)").slice(0, 4000);
+      await sq(env, "/v2/bookings/" + id, { idempotency_key: crypto.randomUUID(), booking: { version: bk.version, seller_note: note } }, "PUT");
+    }
+    return { status: "confirmed" };
+  }
+  if (b.answer === "no") {
+    await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: crypto.randomUUID(), booking_version: bk.version });
+    ctx && ctx.waitUntil(notifyWaitlist(env, bk).catch((e) => console.error("WAITLIST", e.stack || e)));
+    return { status: "cancelled" };
+  }
+  throw bad("Invalid answer");
+}
+
+async function autoCancelUnconfirmed(env, opt) {
+  if (env.REQUIRE_CONFIRM === "0") return { disabled: true };
+  const now = opt.now ? new Date(opt.now) : new Date();
+  const list = await listBookings(env, now, new Date(now.getTime() + 60 * 60e3)); // empiezan dentro de 1 h
+  const out = [];
+  for (const b of list) {
+    if (b.status !== "ACCEPTED") continue;
+    if (String(b.seller_note || "").includes(CONFIRM_MARK)) continue;
+    // solo citas reservadas después de activar la política (las anteriores no la aceptaron)
+    if (!env.CONFIRM_SINCE || Date.parse(b.created_at) < Date.parse(env.CONFIRM_SINCE)) continue;
+    // solo si reservó con más de 24 h (recibió el recordatorio con el enlace para confirmar)
+    if (Date.parse(b.start_at) - Date.parse(b.created_at) < 24 * 3600e3) continue;
+    if (!opt.dry) {
+      await sq(env, "/v2/bookings/" + b.id + "/cancel", { idempotency_key: "auto-" + b.id + "-" + b.version, booking_version: b.version });
+      await notifyWaitlist(env, b).catch((e) => console.error("WAITLIST", e.stack || e));
+    }
+    out.push({ booking: b.id, start: b.start_at, cancelled: !opt.dry });
+  }
+  return { checkedAt: now.toISOString(), cancelled: out };
+}
+
+/* ---------------- Lista de espera ---------------- */
+// Se guarda en KV por día (hora de Houston). Cuando se libera una cita ese día,
+// se avisa por correo (Resend) a quienes esperaban, con el enlace para reservar.
+
+function ymdTZ(d, tz) { return new Intl.DateTimeFormat("en-CA", { timeZone: tz || TZ_DEFAULT, year: "numeric", month: "2-digit", day: "2-digit" }).format(d); }
+
+async function waitlistJoin(env, b) {
+  if (!env.WAITLIST) throw new Error("Falta KV WAITLIST");
+  const clean = (s, n) => String(s || "").trim().slice(0, n);
+  const name = clean(b.name, 60), email = clean(b.email, 120).toLowerCase(), phone = e164(b.phone);
+  const date = clean(b.date, 10), service = clean(b.service, 80), lang = b.lang === "en" ? "en" : "es";
+  if (!name) throw bad("Name required");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw bad("Invalid email");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw bad("Invalid date");
+  const today = ymdTZ(new Date(), env.TIMEZONE);
+  if (date < today) throw bad("Past date");
+  const key = "wl:" + date + ":" + email;
+  const ttl = Math.max(3600, Math.round((Date.parse(date + "T23:59:59-06:00") - Date.now()) / 1000) + 86400);
+  await env.WAITLIST.put(key, JSON.stringify({ name, email, phone, date, service, lang, at: Date.now() }), { expirationTtl: ttl });
+  if (env.RESEND_API_KEY && env.MAIL_FROM && env.NOTIFY_EMAIL) {
+    resend(env, env.NOTIFY_EMAIL, "Lista de espera: " + name + " para el " + date, `<p>${name} (${email}${phone ? ", " + phone : ""}) se apuntó a la lista de espera para el <b>${date}</b>${service ? " · " + service : ""}.</p>`, "").catch(() => {});
+  }
+  return { ok: true };
+}
+
+async function notifyWaitlist(env, booking) {
+  if (!env.WAITLIST) return { sent: 0 };
+  const tz = env.TIMEZONE || TZ_DEFAULT;
+  const start = new Date(booking.start_at);
+  if (start.getTime() < Date.now() + 20 * 60e3) return { sent: 0 }; // demasiado tarde para aprovecharla
+  const date = ymdTZ(start, tz);
+  const list = await env.WAITLIST.list({ prefix: "wl:" + date + ":" });
+  const site = (env.SITE_URL || "https://nailsbymelyg.com").replace(/\/$/, "");
+  let sent = 0;
+  for (const k of list.keys) {
+    const e = JSON.parse((await env.WAITLIST.get(k.name)) || "null");
+    if (!e || e.notified) continue;
+    const en = e.lang === "en";
+    const time = new Intl.DateTimeFormat(en ? "en-US" : "es-US", { timeZone: tz, weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" }).format(start);
+    const subject = en ? "A spot just opened: " + time : "Se liberó un hueco: " + time;
+    const html = `<div style="font-family:Arial,sans-serif;color:#4E222C;max-width:520px;margin:auto;padding:24px;background:#FAF6F3;border:1px solid #D9C3C0">
+      <p style="font-size:15px">${en ? "Hi" : "Hola"} ${e.name},</p>
+      <h2 style="font-family:Georgia,serif;font-weight:400;font-style:italic">${en ? "A spot just opened up 💅" : "Se liberó un hueco 💅"}</h2>
+      <p style="font-size:16px"><b>${time}</b></p>
+      <p style="font-size:14px;color:#7E5560">${en ? "It goes to whoever books first." : "Es para la primera que lo reserve."}</p>
+      <p><a href="${site}/reservar.html" style="display:inline-block;background:#662E3A;color:#F3ECE8;padding:14px 22px;text-decoration:none;font-size:13px;letter-spacing:.14em">${en ? "BOOK NOW" : "RESERVAR AHORA"}</a></p></div>`;
+    if (env.RESEND_API_KEY && env.MAIL_FROM) {
+      await resend(env, e.email, subject, html, subject + " " + site + "/reservar.html").catch((er) => console.error("WL MAIL", er));
+      e.notified = Date.now();
+      await env.WAITLIST.put(k.name, JSON.stringify(e), { expirationTtl: 86400 });
+      sent++;
+    } else {
+      console.log("WAITLIST (sin correo configurado) avisar a", e.email, "hueco", booking.start_at);
+    }
+  }
+  return { sent };
 }
 
 /* ---------------- Recordatorios de cita ---------------- */

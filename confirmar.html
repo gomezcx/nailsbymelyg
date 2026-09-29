@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Servicios y precios · Nails by MelyG, Katy TX</title>
-<meta name="description" content="Menú de manicura y pedicura rusa en Katy, TX: gel, rubber base, builder gel, Poly Gel y Gel‑X desde $65. Políticas de cita y preguntas frecuentes.">
-<link rel="canonical" href="https://nailsbymelyg.com/servicios.html">
+<title>Confirmar cita · Nails by MelyG</title>
+<meta name="description" content="Confirma o cancela tu cita en Nails by MelyG.">
+<link rel="canonical" href="https://nailsbymelyg.com/confirmar.html">
+<meta name="robots" content="noindex">
 <meta name="theme-color" content="#662E3A">
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32">
@@ -13,8 +14,8 @@
 <link rel="manifest" href="site.webmanifest">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Nails by MelyG">
-<meta property="og:title" content="Servicios y precios · Nails by MelyG, Katy TX">
-<meta property="og:description" content="Menú de manicura y pedicura rusa en Katy, TX: gel, rubber base, builder gel, Poly Gel y Gel‑X desde $65. Políticas de cita y preguntas frecuentes.">
+<meta property="og:title" content="Confirmar cita · Nails by MelyG">
+<meta property="og:description" content="Confirma o cancela tu cita en Nails by MelyG.">
 <meta property="og:image" content="https://nailsbymelyg.com/assets/img/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,14 +24,14 @@
 <link rel="stylesheet" href="assets/css/styles.css">
 <script>(function(d){d.classList.replace("no-js","js");try{if(sessionStorage.getItem("mely-nav"))d.classList.add("is-entering")}catch(e){}if(!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("motion-wait");setTimeout(function(){d.classList.remove("motion-wait","is-entering")},4000)})(document.documentElement)</script>
 </head>
-<body data-page="services">
+<body data-page="confirm">
 <a class="skip" href="#main" data-i18n="skip">Saltar al contenido</a>
 
 <header class="site-header" data-header>
   <div class="wrap">
     <a class="brand" href="./" aria-label="Nails by MelyG, inicio"><picture><source srcset="assets/img/logo-wine.webp" type="image/webp"><img src="assets/img/logo-wine.png" width="480" height="244" alt="Nails by MelyG"></picture></a>
     <nav class="nav" aria-label="Principal" data-i18n-attr="aria-label:nav.label">
-      <a href="servicios.html" aria-current="page" data-i18n="nav.services">Servicios</a>
+      <a href="servicios.html" data-i18n="nav.services">Servicios</a>
       <a href="cursos.html" data-i18n="nav.courses">Cursos</a>
       <a href="galeria.html" data-i18n="nav.gallery">Galería</a>
       <a href="./#mely" data-i18n="nav.about">Sobre mí</a>
@@ -58,7 +59,7 @@
   </div>
   <nav aria-label="Menú">
     <a href="./"><span data-i18n="nav.home">Inicio</span><small>01</small></a>
-    <a href="servicios.html" aria-current="page"><span data-i18n="nav.services">Servicios</span><small>02</small></a>
+    <a href="servicios.html"><span data-i18n="nav.services">Servicios</span><small>02</small></a>
     <a href="cursos.html"><span data-i18n="nav.courses">Cursos</span><small>03</small></a>
     <a href="galeria.html"><span data-i18n="nav.gallery">Galería</span><small>04</small></a>
     <a href="./#mely"><span data-i18n="nav.about">Sobre mí</span><small>05</small></a>
@@ -74,65 +75,26 @@
 <main id="main">
   <section class="page-hero">
     <div class="wrap">
-      <p class="eyebrow" data-i18n="svcp.eyebrow">Servicios y precios</p>
-      <h1 data-i18n="svcp.h1">Mi <em>menú</em></h1>
-      <p class="lead" data-i18n="svcp.lead">Todos los servicios incluyen preparación con técnica rusa. Los precios pueden variar según el largo o el diseño que elijas.</p>
+      <p class="eyebrow" data-i18n="cf.eyebrow">Tu cita</p>
+      <h1 data-i18n="cf.h1">Confirma <em>tu cita</em></h1>
+      <p class="lead" data-i18n="cf.lead">Cuéntame si vienes. Si no confirmas al menos 1 hora antes, la cita se libera para otra clienta.</p>
     </div>
   </section>
 
-  <nav class="menu-tabs" aria-label="Categorías" data-i18n-attr="aria-label:svcp.cats"><div class="wrap" data-menu-tabs></div></nav>
+  <section class="section cf">
+    <div class="wrap cf-wrap">
+      <form class="form cf-form" data-cf-form novalidate>
+        <div class="form-row">
+          <div class="field"><label for="cf-phone" data-i18n="cf.phone">Teléfono con el que reservaste</label><input id="cf-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(832) 000-0000" required><span class="err" data-i18n="bk.phoneErr">Escribe un teléfono válido.</span></div>
+          <div class="field"><label for="cf-check" data-i18n="cf.check">Tu correo o tu nombre</label><input id="cf-check" autocomplete="email" placeholder="tu@correo.com" required><span class="err" data-i18n="bk.req">Este campo es obligatorio.</span></div>
+        </div>
+        <div class="step-actions" style="margin-top:8px"><button class="btn" type="submit"><span data-i18n="cf.find">Buscar mi cita</span></button></div>
+        <p class="note" data-i18n="cf.privacy">Solo te muestro tu cita si el teléfono y el correo (o el nombre) coinciden con tu reserva.</p>
+      </form>
 
-  <div class="wrap" id="menu" aria-live="polite">
-    <noscript><p style="padding:48px 0">Activa JavaScript para ver el menú, o <a href="https://book.squareup.com/appointments/k5i21phbyenjqm/location/LB3NRH4R7V151">míralo en Square</a>.</p></noscript>
-  </div>
-
-  <section class="section on-wine" id="politicas" aria-labelledby="pol-title">
-    <div class="wrap">
-      <p class="eyebrow" data-i18n="pol.eyebrow">Antes de tu cita</p>
-      <h2 id="pol-title" style="margin-bottom:48px" data-i18n="pol.h2">Políticas <em>de cita</em></h2>
-      <div class="policy">
-        <div><h3 data-i18n="pol.1t">Cambios y cancelaciones</h3><p data-i18n="pol.1p">Avísame con al menos 24 horas para cambiar o cancelar. El día antes te llega un recordatorio: confirma tu cita en <a href="confirmar.html">nailsbymelyg.com/confirmar</a>. Si no confirmas 1 hora antes, la cita se libera.</p></div>
-        <div><h3 data-i18n="pol.2t">Tarjeta de garantía</h3><p data-i18n="pol.2p">Al reservar se guarda una tarjeta, pero no se cobra nada. Solo se aplica un cargo de $35 si no llegas o cancelas con menos de 24 horas.</p></div>
-        <div><h3 data-i18n="pol.3t">Pago</h3><p data-i18n="pol.3p">Pagas al terminar tu cita. Se acepta tarjeta, Apple Pay y Google Pay.</p></div>
-      </div>
+      <div class="cf-results" data-cf-results aria-live="polite"></div>
     </div>
   </section>
-
-  <section class="section gift" aria-labelledby="gift-title">
-    <div class="wrap gift-inner">
-      <div class="gift-card" aria-hidden="true" data-tilt>
-        <img src="assets/img/logo-light.png" width="480" height="244" alt="" loading="lazy">
-        <span class="gift-label">Gift card</span>
-        <span class="gift-nail" data-nail data-bare data-polish="#E0B6B9" data-shape="almond"></span>
-      </div>
-      <div>
-        <p class="eyebrow" data-i18n="gift.eyebrow">Gift cards</p>
-        <h2 id="gift-title" data-split data-i18n="gift.h2">El regalo <em>perfecto</em></h2>
-        <p class="lead reveal" style="margin-top:24px" data-i18n="gift.lead">Regala una cita conmigo: tú eliges el monto o el servicio y yo me encargo del resto. Ideal para cumpleaños, Día de las Madres o simplemente porque sí.</p>
-        <a class="btn reveal" href="giftcard.html" data-magnetic><span data-i18n="gift.cta2">Diseña tu gift card</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="faq-title">
-    <div class="wrap">
-      <p class="eyebrow" data-i18n="faq.eyebrow">Preguntas frecuentes</p>
-      <h2 id="faq-title" style="margin-bottom:40px" data-i18n="faq.h2">Lo que <em>más nos preguntan</em></h2>
-      <div class="faq">
-        <details><summary data-i18n="faq.1q">¿Qué es la manicura rusa?</summary><p data-i18n="faq.1p">Es una técnica en seco: la cutícula se limpia con torno y fresas finas en lugar de remojar y cortar. Permite aplicar el esmalte muy cerca de la cutícula, por eso el resultado se ve más limpio y el crecimiento se nota menos.</p></details>
-        <details><summary data-i18n="faq.2q">¿Por qué dura más que una manicura normal?</summary><p data-i18n="faq.2p">Cada cita incluye preparación completa de la uña y nivelación, así que el producto se adhiere mejor. Yo te digo cada cuánto volver según tu uña y el producto que elijas.</p></details>
-        <details><summary data-i18n="faq.3q">Vengo con gel o acrílico de otro salón, ¿qué hago?</summary><p data-i18n="faq.3p">Agrega “Retirada de producto anterior” ($15) al reservar. Así separo el tiempo necesario para quitarlo con cuidado.</p></details>
-        <details><summary data-i18n="faq.4q">¿Cuál elijo: gel, rubber base o builder gel?</summary><p data-i18n="faq.4p">El gel es color y brillo. El rubber base nivela y da flexibilidad a uñas naturales finas. El builder gel da estructura y más resistencia. Si tienes dudas, elige el que más te guste y te asesoro en la cita.</p></details>
-        <details><summary data-i18n="faq.5q">¿Cómo cambio o cancelo mi cita?</summary><p data-i18n="faq.5p">Desde el enlace del correo de confirmación, o escribiéndome por WhatsApp, con al menos 24 horas de anticipación.</p></details>
-      </div>
-      <div class="step-actions">
-        <a class="btn" href="reservar.html" data-i18n="cta.book">Reservar cita</a>
-        <a class="btn btn--ghost" data-wa="hello" href="https://wa.me/18323104747" data-i18n="cta.wa">Escribir por WhatsApp</a>
-      </div>
-    </div>
-  </section>
-
 </main>
 
 <footer class="site-footer on-wine">
@@ -179,6 +141,7 @@
 <script src="assets/js/i18n-en.js" defer></script>
 <script src="assets/js/main.js" defer></script>
 <script src="assets/js/nail.js" defer></script>
+<script src="assets/js/confirm.js" defer></script>
 <script src="assets/js/motion.js" defer></script>
 </body>
 </html>

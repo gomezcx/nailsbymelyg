@@ -114,6 +114,19 @@
             <p class="slots-title" id="slots-title"></p>
             <div class="slots" id="slots" role="group" aria-labelledby="slots-title"></div>
             <p class="note" style="margin-top:16px" data-i18n="bk.tz">Horarios en hora de Houston (CT), según mi agenda real.</p>
+            <details class="wl" id="waitlist">
+              <summary><span data-i18n="wl.sum">¿No hay hora que te venga bien este día? <b>Apúntate a la lista de espera</b></span></summary>
+              <form class="form wl-form" id="wl-form" novalidate>
+                <p class="note" id="wl-day"></p>
+                <div class="form-row">
+                  <div class="field"><label for="wl-name" data-i18n="bk.given">Nombre</label><input id="wl-name" autocomplete="name" required><span class="err" data-i18n="bk.req">Este campo es obligatorio.</span></div>
+                  <div class="field"><label for="wl-email" data-i18n="bk.email">Correo</label><input id="wl-email" type="email" autocomplete="email" required><span class="err" data-i18n="bk.emailErr">Escribe un correo válido.</span></div>
+                </div>
+                <div class="field"><label for="wl-phone" data-i18n="wl.phone">Teléfono (opcional)</label><input id="wl-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(832) 000-0000"></div>
+                <div class="step-actions" style="margin-top:4px"><button class="btn btn--ghost" type="submit"><span data-i18n="wl.join">Avísame si se libera</span></button></div>
+                <p class="note" id="wl-msg" aria-live="polite"></p>
+              </form>
+            </details>
           </div>
           <div id="square-fallback" hidden>
             <p class="lead" data-i18n="bk.fbLead">Para elegir día y hora te llevo a mi agenda en Square. Tu servicio ya está elegido; solo búscalo en la lista.</p>
@@ -143,7 +156,7 @@
               <div class="card-box" id="card-container"></div>
               <p class="note" data-i18n="bk.cardNote">No se cobra nada ahora. Square guarda la tarjeta de forma segura por la política de cancelación.</p>
             </div>
-            <label class="check" id="policy-check"><input type="checkbox" id="f-policy" required> <span data-i18n="bk.policy">Acepto la política: cambios o cancelaciones con 24 horas de anticipación. Si no llego o cancelo tarde, se cobra $35.</span></label>
+            <label class="check" id="policy-check"><input type="checkbox" id="f-policy" required> <span data-i18n="bk.policy">Acepto la política: cambios o cancelaciones con 24 horas de anticipación. Si no llego o cancelo tarde, se cobra $35. Confirmaré mi cita cuando me llegue el recordatorio; si no la confirmo 1 hora antes, se libera.</span></label>
             <div class="step-actions">
               <button class="back-link" type="button" data-go="2" data-i18n="bk.back">Volver</button>
               <button class="btn" type="submit" id="confirm" data-i18n="bk.confirm">Confirmar cita</button>
@@ -194,7 +207,7 @@
       </div>
       <div>
         <h2 data-i18n="foot.explore">EXPLORA</h2>
-        <ul><li><a href="servicios.html" data-i18n="nav.services">Servicios</a></li><li><a href="cursos.html" data-i18n="nav.courses">Cursos</a></li><li><a href="galeria.html" data-i18n="nav.gallery">Galería</a></li><li><a href="reservar.html" data-i18n="cta.book">Reservar cita</a></li><li><a href="giftcard.html" data-i18n="foot.gift">Gift cards</a></li><li><a href="servicios.html#politicas" data-i18n="foot.policy">Políticas de cita</a></li></ul>
+        <ul><li><a href="servicios.html" data-i18n="nav.services">Servicios</a></li><li><a href="cursos.html" data-i18n="nav.courses">Cursos</a></li><li><a href="galeria.html" data-i18n="nav.gallery">Galería</a></li><li><a href="reservar.html" data-i18n="cta.book">Reservar cita</a></li><li><a href="giftcard.html" data-i18n="foot.gift">Gift cards</a></li><li><a href="confirmar.html" data-i18n="foot.confirm">Confirmar mi cita</a></li><li><a href="servicios.html#politicas" data-i18n="foot.policy">Políticas de cita</a></li></ul>
       </div>
       <div>
         <h2 data-i18n="foot.follow">SÍGUENOS</h2>

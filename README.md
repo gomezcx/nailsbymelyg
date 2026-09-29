@@ -13,6 +13,7 @@ HTML/CSS/JS sin frameworks ni build, publicada con GitHub Pages. Bilingüe ES/EN
 | `servicios.html` | Menú completo con precios (sale de `assets/js/data.js`), políticas y FAQ |
 | `cursos.html` | Manicura rusa y Gel‑X ($550 cada uno, máx. 6 cupos). Fechas por WhatsApp |
 | `reservar.html` | Reserva propia en 4 pasos conectada a Square |
+| `confirmar.html` | La clienta confirma o cancela su cita (enlace del SMS de Square). Sin confirmar 1 h antes, el Worker la cancela (solo citas reservadas con +24 h y desde `CONFIRM_SINCE`) y avisa a la lista de espera |
 | `privacidad.html` | Aviso de privacidad |
 
 ## Uña realista y motion

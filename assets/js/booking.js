@@ -197,7 +197,29 @@
   $("#wk-prev").addEventListener("click", function () { S.week = Math.max(0, S.week - 1); renderDays(); });
   $("#wk-next").addEventListener("click", function () { S.week = Math.min(3, S.week + 1); renderDays(); });
 
+  /* ---------- lista de espera del día elegido ---------- */
+  function renderWaitlist() {
+    var wl = $("#waitlist");
+    if (!wl) return;
+    wl.hidden = !LIVE || !S.day;
+    if (S.day) $("#wl-day").textContent = t("Te aviso por correo si se libera un hueco el ", "I'll email you if a spot opens on ") + fmtDay(S.day, { weekday: "long", day: "numeric", month: "long" }) + ".";
+  }
+  if ($("#wl-form")) $("#wl-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("#wl-name").value.trim(), email = $("#wl-email").value.trim(), phone = $("#wl-phone").value.trim();
+    $("#wl-name").closest(".field").classList.toggle("invalid", !name);
+    var okMail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+    $("#wl-email").closest(".field").classList.toggle("invalid", !okMail);
+    if (!name || !okMail || !S.day) return;
+    var s = svc(S.svcId);
+    $("#wl-msg").textContent = t("Guardando…", "Saving…");
+    api("/waitlist", { name: name, email: email, phone: phone, date: S.day, service: s ? s[I.lang][0] : "", lang: I.lang })
+      .then(function () { $("#wl-msg").textContent = t("¡Listo! Estás en la lista de espera de ese día. Si se libera un hueco te escribo al correo.", "Done! You're on that day's waitlist. If a spot opens I'll email you."); })
+      .catch(function () { $("#wl-msg").textContent = t("No se pudo guardar. Escríbeme por WhatsApp.", "Couldn't save. Message me on WhatsApp."); });
+  });
+
   function renderSlots(loading) {
+    renderWaitlist();
     var box = $("#slots");
     box.innerHTML = "";
     if (loading) {

@@ -3,9 +3,9 @@ main = "src/index.js"
 compatibility_date = "2025-06-01"
 
 [vars]
-SQUARE_ENV = "production"            # "sandbox" para probar
-SQUARE_LOCATION_ID = ""              # Square Developer › Locations
-ALLOWED_ORIGINS = "https://nailsbymelyg.com,https://www.nailsbymelyg.com"
+SQUARE_ENV = "sandbox"               # pruebas. Para real: "production"
+SQUARE_LOCATION_ID = "L12K90NNX8GG7" # sandbox. Real (Nailsbymelyg Main): "LB3NRH4R7V151"
+ALLOWED_ORIGINS = "https://nailsbymelyg.com,https://www.nailsbymelyg.com,http://localhost:8765"
 SITE_URL = "https://nailsbymelyg.com"
 # Opcional: correo de las gift cards con Resend (resend.com). La clave va como secreto:
 #   npx wrangler secret put RESEND_API_KEY

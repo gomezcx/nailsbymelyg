@@ -8,10 +8,12 @@ window.MELY_CONFIG = {
   // URL del Worker de Cloudflare (ver /worker/README.md). Ej: "https://api.nailsbymelyg.com"
   apiBase: "",
 
-  // Web Payments SDK de Square (para guardar la tarjeta por la política de cancelación)
-  squareEnv: "production",        // "sandbox" para pruebas
-  squareAppId: "",                // Developer Dashboard › Credentials › Application ID
-  squareLocationId: "",           // Developer Dashboard › Locations
+  // Web Payments SDK de Square (tarjeta de garantía de la reserva y pago de gift cards).
+  // App de Square: "Web nailsbymelyg". Ahora en PRUEBAS (sandbox). Para pasar a real:
+  //   squareEnv: "production", squareAppId: "sq0idp-as0w6-6pNTmIv70WkB-yyw", squareLocationId: "LB3NRH4R7V151"
+  squareEnv: "sandbox",
+  squareAppId: "sandbox-sq0idb-SWer2OtA1EUd0pcITtaXcw",
+  squareLocationId: "L12K90NNX8GG7",
 
   // Respaldo: reserva de Square de siempre
   squareBookingUrl: "https://book.squareup.com/appointments/k5i21phbyenjqm/location/LB3NRH4R7V151",

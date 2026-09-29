@@ -4,7 +4,7 @@ Conecta `reservar.html` con Square sin exponer el token. Es gratis dentro del pl
 
 ## 1. Square
 
-1. Entra en <https://developer.squareup.com> con la cuenta de Mely y crea una aplicación (por ejemplo "Web nailsbymelyg").
+1. Entra en <https://developer.squareup.com> con la cuenta de Mely. La aplicación **"Web nailsbymelyg"** ya está creada (Application ID de producción `sq0idp-as0w6-6pNTmIv70WkB-yyw`, de sandbox `sandbox-sq0idb-SWer2OtA1EUd0pcITtaXcw`).
 2. En **Credentials** copia:
    - **Production Access Token**: va como secreto del Worker. No va en la web ni en GitHub.
    - **Production Application ID**: va en `assets/js/config.js` → `squareAppId`.
@@ -99,5 +99,5 @@ Cada hora, el Worker pregunta a Square qué citas empiezan dentro de 24 horas y 
    curl -X POST -H "X-Admin-Key: TU_CLAVE" "https://nailsbymelyg-api.<cuenta>.workers.dev/reminders/run?hours=24&to=correo-de-mely@ejemplo.com"
    ```
 
-La app de Square necesita permisos para leer citas (`APPOINTMENTS_READ` y `APPOINTMENTS_ALL_READ`, para ver también las citas que no se hicieron desde la web), clientas (`CUSTOMERS_READ`) y catálogo (`ITEMS_READ`).
+Con el *Access Token* propio de la app (el de Credentials) Square da acceso completo a la cuenta, así que no hay que configurar permisos aparte. Los permisos solo importan si algún día se usa OAuth.
 

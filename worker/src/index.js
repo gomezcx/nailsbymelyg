@@ -8,18 +8,27 @@
  *   POST /book          → crea/encuentra clienta, guarda tarjeta y crea la cita
  *   POST /giftcard/purchase → cobra, crea y activa una gift card de Square (si falla, reembolsa)
  *   GET  /giftcard/balance?gan=… → estado y saldo de una gift card (lo que diga Square)
+ *   POST /reminders/run  → (solo con X-Admin-Key) lanza los recordatorios a mano; ?dry=1 solo muestra
+ *   Cron cada hora       → recordatorio por correo a las citas que empiezan dentro de REMINDER_HOURS
  *
  * Variables (wrangler.toml / secretos):
  *   SQUARE_ACCESS_TOKEN  (secreto)   SQUARE_LOCATION_ID
  *   SQUARE_ENV = production|sandbox  ALLOWED_ORIGINS = "https://nailsbymelyg.com,https://www.nailsbymelyg.com"
  *   SITE_URL = "https://nailsbymelyg.com"  (para el enlace de la tarjeta)
  *   Opcional, para enviar la gift card por correo: RESEND_API_KEY (secreto), MAIL_FROM, NOTIFY_EMAIL
+ *   Recordatorios: RESEND_API_KEY + MAIL_FROM, REMINDER_HOURS = "24" (o "24,2"), ADMIN_KEY (secreto),
+ *   WHATSAPP = "18323104747", MAPS_URL, ADDRESS, TIMEZONE = "America/Chicago"
  */
 
 const SQUARE_VERSION = "2025-06-18";
 const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 
 export default {
+  // cron: cada hora busca las citas que empiezan dentro de REMINDER_HOURS y avisa
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runReminders(env, { now: event.scheduledTime }).catch((e) => console.error("REMINDERS", e.stack || e, e.details ? JSON.stringify(e.details) : "")));
+  },
+
   async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
     const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -39,6 +48,14 @@ export default {
       if (request.method === "POST" && url.pathname === "/availability") return json(await availability(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/book") return json(await book(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/giftcard/purchase") return json(await giftPurchase(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/reminders/run") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        return json(await runReminders(env, {
+          dry: url.searchParams.has("dry"),
+          hours: url.searchParams.get("hours"),
+          testTo: url.searchParams.get("to"),
+        }), 200, cors);
+      }
       if (request.method === "GET" && url.pathname === "/giftcard/balance") return json(await giftBalance(env, url.searchParams.get("gan")), 200, cors);
       return json({ error: "Not found" }, 404, cors);
     } catch (err) {
@@ -326,6 +343,143 @@ function b64url(str) {
   let bin = "";
   bytes.forEach((b) => { bin += String.fromCharCode(b); });
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/* ---------------- Recordatorios de cita ---------------- */
+// Cada hora: citas que empiezan dentro de N horas (ventana de 1 hora, así
+// cada cita recibe un solo aviso por cada N) → correo personalizado.
+
+// Nombre en Square → nombre de la web [es, en] (copiado de assets/js/data.js, campo "sq")
+const SERVICE_NAMES = {"manicure russo & gel (shellac)":["Manicura rusa + gel","Russian manicure + gel"],"russian manicure & rubber base":["Manicura rusa + rubber base","Russian manicure + rubber base"],"russian manicure & builder gel":["Manicura rusa + builder gel","Russian manicure + builder gel"],"manicure russo & gel x":["Manicura rusa + Gel‑X","Russian manicure + Gel‑X"],"manicure russo & poly gel":["Manicura rusa + Poly Gel","Russian manicure + Poly Gel"],"manicure natural nails & poly gel":["Uñas naturales + Poly Gel","Natural nails + Poly Gel"],"manicure extension nails & builder gel":["Extensiones + builder gel","Extensions + builder gel"],"russian pedicure & gel (shellac)":["Pedicura rusa + gel","Russian pedicure + gel"],"russian pedicure & rubber base":["Pedicura rusa + rubber base","Russian pedicure + rubber base"],"manicure & pedicure for men's":["Manicura y pedicura para hombres","Men’s manicure & pedicure"],"manicure and pedicure for children":["Manicura y pedicura para niños","Kids’ manicure & pedicure"],"service to remove previous product":["Retirada de producto anterior","Removal of previous product"]};
+
+async function runReminders(env, opt) {
+  const now = opt.now ? new Date(opt.now) : new Date();
+  const hoursList = String(opt.hours || env.REMINDER_HOURS || "24").split(",").map((h) => parseInt(h, 10)).filter((h) => h > 0 && h <= 72);
+  const report = [];
+  for (const h of hoursList) {
+    // ventana [ahora+h, ahora+h+1) redondeada a la hora
+    const from = new Date(now); from.setUTCMinutes(0, 0, 0); from.setUTCHours(from.getUTCHours() + h);
+    const to = new Date(from.getTime() + 3600e3);
+    const list = await listBookings(env, from, to);
+    for (const b of list) {
+      if (b.status !== "ACCEPTED" && b.status !== "PENDING") continue;
+      try {
+        const info = await reminderInfo(env, b);
+        if (!info.email || info.unsubscribed) { report.push({ booking: b.id, skipped: "no email" }); continue; }
+        const mail = reminderMail(env, info, h);
+        const target = opt.testTo || info.email;
+        if (!opt.dry) {
+          if (!env.RESEND_API_KEY || !env.MAIL_FROM) throw new Error("Falta RESEND_API_KEY o MAIL_FROM");
+          await resend(env, target, mail.subject, mail.html, mail.text);
+        }
+        report.push({ booking: b.id, to: target, when: info.when, hours: h, sent: !opt.dry, subject: mail.subject });
+      } catch (e) {
+        console.error("REMINDER", b.id, e.stack || e);
+        report.push({ booking: b.id, error: String(e.message || e) });
+      }
+    }
+  }
+  return { checkedAt: now.toISOString(), reminders: report };
+}
+
+async function listBookings(env, from, to) {
+  const out = [];
+  let cursor;
+  do {
+    const q = new URLSearchParams({ location_id: env.SQUARE_LOCATION_ID, start_at_min: from.toISOString(), start_at_max: to.toISOString(), limit: "100" });
+    if (cursor) q.set("cursor", cursor);
+    const r = await sq(env, "/v2/bookings?" + q.toString());
+    out.push(...(r.bookings || []));
+    cursor = r.cursor;
+  } while (cursor);
+  return out;
+}
+
+async function reminderInfo(env, b) {
+  const tz = env.TIMEZONE || "America/Chicago";
+  const en = /\(EN\)/.test(b.customer_note || "");
+  const c = b.customer_id ? (await sq(env, "/v2/customers/" + b.customer_id)).customer : {};
+  // nombres de los servicios reservados
+  const ids = (b.appointment_segments || []).map((s) => s.service_variation_id).filter(Boolean);
+  let services = [];
+  let minutes = (b.appointment_segments || []).reduce((n, s) => n + (s.duration_minutes || 0), 0);
+  if (ids.length) {
+    const r = await sq(env, "/v2/catalog/batch-retrieve", { object_ids: ids, include_related_objects: true });
+    const items = {};
+    (r.related_objects || []).forEach((o) => { if (o.type === "ITEM") items[o.id] = o.item_data.name; });
+    services = (r.objects || []).map((o) => items[o.item_variation_data?.item_id] || o.item_variation_data?.name).filter(Boolean)
+      .map((n) => { const w = SERVICE_NAMES[n.toLowerCase()]; return w ? w[en ? 1 : 0] : n; });
+  }
+  const start = new Date(b.start_at);
+  const loc = en ? "en-US" : "es-US";
+  const date = new Intl.DateTimeFormat(loc, { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(start);
+  const time = new Intl.DateTimeFormat(loc, { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(start);
+  return {
+    id: b.id, en, start, minutes, services,
+    name: c.given_name || "", email: c.email_address || "",
+    unsubscribed: !!(c.preferences && c.preferences.email_unsubscribed),
+    date: date.charAt(0).toUpperCase() + date.slice(1), time,
+    when: date + " " + time,
+  };
+}
+
+function reminderMail(env, i, hours) {
+  const en = i.en;
+  const address = env.ADDRESS || "2727 N Mason Rd, Suite 301, Katy, TX 77449";
+  const maps = env.MAPS_URL || "https://maps.app.goo.gl/jeEr8PQE1xyBjdHz8";
+  const wa = "https://wa.me/" + (env.WHATSAPP || "18323104747") + "?text=" + encodeURIComponent(en ? "Hi Mely, about my appointment on " + i.when : "Hola Mely, sobre mi cita del " + i.when);
+  const site = (env.SITE_URL || "https://nailsbymelyg.com").replace(/\/$/, "");
+  const end = new Date(i.start.getTime() + (i.minutes || 90) * 60000);
+  const gcal = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+    "&text=" + encodeURIComponent("Nails by MelyG" + (i.services.length ? " · " + i.services.join(" + ") : "")) +
+    "&dates=" + stamp(i.start) + "/" + stamp(end) +
+    "&location=" + encodeURIComponent(address) +
+    "&details=" + encodeURIComponent(en ? "Change or cancel at least 24 h ahead: " + wa : "Cambios o cancelaciones con 24 h de anticipación: " + wa);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const hello = i.name ? (en ? "Hi " : "Hola ") + esc(i.name) + "," : (en ? "Hi," : "Hola,");
+  const soon = hours <= 3;
+  const lead = soon ? (en ? "See you in a little while 💅" : "Te espero en un ratito 💅") : (en ? "See you tomorrow 💅" : "Te espero mañana 💅");
+  const svc = i.services.length ? esc(i.services.join(" + ")) : (en ? "Your appointment" : "Tu cita");
+  const dur = i.minutes ? (Math.floor(i.minutes / 60) ? Math.floor(i.minutes / 60) + " h " : "") + (i.minutes % 60 ? (i.minutes % 60) + " min" : "") : "";
+  const subject = soon
+    ? (en ? "Your appointment is at " + i.time + " today 💅" : "Tu cita es hoy a las " + i.time + " 💅")
+    : (en ? "Reminder: " + i.date + " at " + i.time + " · Nails by MelyG" : "Recordatorio: " + i.date + " a las " + i.time + " · Nails by MelyG");
+  const btn = (href, label, solid) => `<a href="${href}" style="display:inline-block;margin:0 8px 10px 0;padding:14px 22px;text-decoration:none;font:600 13px Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;${solid ? "background:#662E3A;color:#F3ECE8" : "border:1px solid #662E3A;color:#662E3A"}">${label}</a>`;
+  const html = `<!doctype html><html lang="${en ? "en" : "es"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0"><div style="background:#F3ECE8;padding:32px 12px;color:#4E222C">
+  <div style="max-width:560px;margin:0 auto;background:#FAF6F3;border:1px solid #D9C3C0">
+    <div style="background:#662E3A;padding:26px 28px;text-align:left">
+      <img src="${site}/assets/img/logo-light.png" width="150" alt="Nails by MelyG" style="display:block;border:0">
+    </div>
+    <div style="padding:30px 28px 10px;font-family:Georgia,serif">
+      <p style="font:15px Arial,sans-serif;margin:0 0 6px;color:#7E5560">${hello}</p>
+      <h1 style="font-weight:400;font-style:italic;font-size:34px;line-height:1.15;margin:0 0 24px">${lead}</h1>
+      <table role="presentation" style="width:100%;border-collapse:collapse;font:16px Arial,sans-serif">
+        <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;color:#7E5560;width:34%">${en ? "Service" : "Servicio"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0">${svc}${dur ? ` <span style="color:#7E5560">· ${dur}</span>` : ""}</td></tr>
+        <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;color:#7E5560">${en ? "When" : "Cuándo"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0"><b>${esc(i.date)}</b><br>${esc(i.time)} <span style="color:#7E5560">(${en ? "Houston time" : "hora de Houston"})</span></td></tr>
+        <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;border-bottom:1px solid #D9C3C0;color:#7E5560">${en ? "Where" : "Dónde"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0;border-bottom:1px solid #D9C3C0"><a href="${maps}" style="color:#662E3A">${esc(address)}</a></td></tr>
+      </table>
+      <div style="margin:26px 0 8px">${btn(maps, en ? "Get directions" : "Cómo llegar", true)}${btn(gcal, en ? "Add to calendar" : "Añadir al calendario", false)}</div>
+      <p style="font:14px Arial,sans-serif;line-height:1.6;color:#7E5560;margin:18px 0">${en
+        ? "Coming in with gel or acrylic from another salon? Let me know so I can plan the removal. If you need to change or cancel, please message me at least 24 hours ahead."
+        : "¿Vienes con gel o acrílico de otro salón? Avísame para separar el tiempo de la retirada. Si necesitas cambiar o cancelar, escríbeme con al menos 24 horas de anticipación."}</p>
+      <p style="margin:0 0 28px">${btn(wa, en ? "Message me on WhatsApp" : "Escribirme por WhatsApp", false)}</p>
+    </div>
+    <div style="padding:18px 28px;border-top:1px solid #D9C3C0;font:12px Arial,sans-serif;color:#7E5560">Nails by MelyG · ${esc(address)} · <a href="${site}" style="color:#7E5560">nailsbymelyg.com</a></div>
+  </div></div></body></html>`;
+  const text = `${hello}\n${lead}\n\n${i.services.join(" + ") || ""}\n${i.date}, ${i.time}\n${address}\n${maps}\n\n${en ? "Change or cancel 24 h ahead" : "Cambios o cancelaciones con 24 h de anticipación"}: ${wa}`;
+  return { subject, html, text };
+}
+
+function stamp(d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
+
+async function resend(env, to, subject, html, text) {
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, html, text, reply_to: env.NOTIFY_EMAIL || undefined }),
+  });
+  if (!r.ok) throw new Error("Resend " + r.status + " " + (await r.text()).slice(0, 200));
+  return true;
 }
 
 /* ---------------- utilidades ---------------- */

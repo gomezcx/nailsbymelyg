@@ -49,6 +49,8 @@ Haz commit y push. Listo.
 | `POST /book` | Vuelve a comprobar el hueco → Customers (busca por correo o crea) → Cards (tarjeta de garantía) → Bookings `create` |
 | `POST /giftcard/purchase` | Payments (cobro) → Gift Cards `create` (DIGITAL) → Gift Card Activities `ACTIVATE`. Si falla la activación → Refunds |
 | `GET /giftcard/balance?gan=` | Gift Cards `from-gan` (estado y saldo) |
+| Cron cada hora | Bookings `list` (citas dentro de 24 h) → Customers → Catalog → correo con Resend |
+| `POST /reminders/run` | Igual que el cron, a mano. Pide la cabecera `X-Admin-Key`. `?dry=1` solo muestra, `?to=correo` manda la prueba a ese correo, `?hours=24` |
 
 Los errores quedan en `wrangler tail`.
 
@@ -72,4 +74,30 @@ Con el Worker conectado, `giftcard.html` cobra con el formulario de Square y cre
    y en `wrangler.toml` pon `MAIL_FROM` (ej. `Nails by MelyG <giftcards@nailsbymelyg.com>`) y `NOTIFY_EMAIL` (el correo de Mely, para que le llegue un aviso de cada venta).
 
 Mientras el Worker no esté conectado, la página funciona igual pero el pedido llega a Mely por WhatsApp y ella activa la tarjeta a mano en Square. Para enseñárselo sin cobrar: `giftcard.html?demo=1`.
+
+## Recordatorios de cita personalizados
+
+Cada hora, el Worker pregunta a Square qué citas empiezan dentro de 24 horas y le manda a cada clienta un correo con el diseño de la marca: su nombre, el servicio (con el nombre de la web, en su idioma), fecha y hora de Houston, la dirección con el mapa, "Añadir al calendario", WhatsApp para cambios y la política de 24 horas. Las citas canceladas no reciben aviso, y tampoco las clientas que se dieron de baja de los correos en Square.
+
+- `REMINDER_HOURS = "24,2"` manda también un aviso 2 horas antes.
+- Si la reserva se hizo en inglés desde la web, el correo sale en inglés.
+- **Apaga el recordatorio por correo de Square** (Square › Appointments › Settings › Communications) para que no les lleguen dos. El de SMS de Square se puede dejar.
+
+### Activarlo
+
+1. Crea una cuenta gratis en [Resend](https://resend.com), añade el dominio `nailsbymelyg.com` y copia los registros DNS que te da en donde esté el dominio.
+2. En `wrangler.toml` pon `MAIL_FROM = "Nails by MelyG <citas@nailsbymelyg.com>"` y `NOTIFY_EMAIL` con el correo de Mely (las respuestas de las clientas le llegan ahí).
+3. Guarda los secretos (se pegan en la terminal, no en ningún archivo):
+   ```bash
+   npx wrangler secret put RESEND_API_KEY
+   npx wrangler secret put ADMIN_KEY
+   npx wrangler deploy
+   ```
+4. Prueba sin enviar nada y después mándate una prueba:
+   ```bash
+   curl -X POST -H "X-Admin-Key: TU_CLAVE" "https://nailsbymelyg-api.<cuenta>.workers.dev/reminders/run?dry=1&hours=24"
+   curl -X POST -H "X-Admin-Key: TU_CLAVE" "https://nailsbymelyg-api.<cuenta>.workers.dev/reminders/run?hours=24&to=correo-de-mely@ejemplo.com"
+   ```
+
+La app de Square necesita permisos para leer citas (`APPOINTMENTS_READ`), clientas (`CUSTOMERS_READ`) y catálogo (`ITEMS_READ`).
 

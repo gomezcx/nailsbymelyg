@@ -10,7 +10,18 @@ SITE_URL = "https://nailsbymelyg.com"
 # Opcional: correo de las gift cards con Resend (resend.com). La clave va como secreto:
 #   npx wrangler secret put RESEND_API_KEY
 MAIL_FROM = ""                       # ej. "Nails by MelyG <giftcards@nailsbymelyg.com>"
-NOTIFY_EMAIL = ""                    # correo de Mely para avisarle de cada venta
+NOTIFY_EMAIL = ""                    # correo de Mely (avisos de gift cards y "responder a" de los recordatorios)
+
+# Recordatorios de cita por correo (usan RESEND_API_KEY y MAIL_FROM)
+REMINDER_HOURS = "24"                # horas antes de la cita; "24,2" manda también uno 2 h antes
+TIMEZONE = "America/Chicago"
+WHATSAPP = "18323104747"
+ADDRESS = "2727 N Mason Rd, Suite 301, Katy, TX 77449"
+MAPS_URL = "https://maps.app.goo.gl/jeEr8PQE1xyBjdHz8"
+# Para lanzarlos a mano y probar: npx wrangler secret put ADMIN_KEY
+
+[triggers]
+crons = ["0 * * * *"]                # cada hora en punto
 
 # El token NO va aquí. Se guarda como secreto:
 #   npx wrangler secret put SQUARE_ACCESS_TOKEN

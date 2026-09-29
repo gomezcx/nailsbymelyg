@@ -61,13 +61,13 @@
     <nav class="nav" aria-label="Principal" data-i18n-attr="aria-label:nav.label">
       <a href="servicios.html" data-i18n="nav.services">Servicios</a>
       <a href="cursos.html" data-i18n="nav.courses">Cursos</a>
-      <a href="#looks" data-i18n="nav.looks">Looks</a>
+      <a href="galeria.html" data-i18n="nav.gallery">Galería</a>
       <a href="#mely" data-i18n="nav.about">Sobre mí</a>
       <a href="#visitanos" data-i18n="nav.visit">Visítanos</a>
     </nav>
     <div class="header-actions">
       <div class="lang" role="group" aria-label="Idioma / Language">
-        <button type="button" data-lang="es" aria-pressed="true">ES</button><span aria-hidden="true">/</span><button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><button type="button" data-lang="es" aria-pressed="true">ES</button><span aria-hidden="true">/</span><button type="button" data-lang="en" aria-pressed="false">EN</button>
       </div>
       <a class="btn header-cta" href="reservar.html" data-magnetic><span data-i18n="cta.book">Reservar cita</span></a>
       <button class="menu-btn" type="button" data-menu-open aria-controls="mobile-menu" aria-expanded="false" aria-label="Abrir menú" data-i18n-attr="aria-label:menu.open">
@@ -89,10 +89,12 @@
     <a href="./"><span data-i18n="nav.home">Inicio</span><small>01</small></a>
     <a href="servicios.html"><span data-i18n="nav.services">Servicios</span><small>02</small></a>
     <a href="cursos.html"><span data-i18n="nav.courses">Cursos</span><small>03</small></a>
-    <a href="#mely"><span data-i18n="nav.about">Sobre mí</span><small>04</small></a>
-    <a href="#visitanos"><span data-i18n="nav.visit">Visítanos</span><small>05</small></a>
+    <a href="galeria.html"><span data-i18n="nav.gallery">Galería</span><small>04</small></a>
+    <a href="#mely"><span data-i18n="nav.about">Sobre mí</span><small>05</small></a>
+    <a href="#visitanos"><span data-i18n="nav.visit">Visítanos</span><small>06</small></a>
   </nav>
   <div class="foot">
+    <div class="lang-big" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es" aria-pressed="true">Español</button><button type="button" data-lang="en" aria-pressed="false">English</button></div>
     <a class="btn" href="reservar.html"><span data-i18n="cta.book">Reservar cita</span></a>
     <a class="btn btn--ghost" data-wa="hello" href="https://wa.me/18323104747"><span data-i18n="cta.wa">Escribir por WhatsApp</span></a>
   </div>
@@ -157,11 +159,19 @@
       <div class="sticky">
         <p class="eyebrow" data-i18n="tech.eyebrow">La técnica rusa</p>
         <h2 id="tech-title" data-split data-i18n="tech.h2">No es una manicura más. <em>Esto es manicura rusa.</em></h2>
-        <div class="technique-photo" data-clip>
-          <picture>
-            <source srcset="assets/img/mely-trabajando.webp" type="image/webp">
-            <img src="assets/img/mely-trabajando.jpg" width="1000" height="1777" loading="lazy" alt="Mely haciendo una manicura rusa con torno en su estudio" data-i18n-attr="alt:img.work" data-parallax="-10">
-          </picture>
+        <div class="technique-media">
+          <div class="technique-photo" data-clip>
+            <picture>
+              <source srcset="assets/img/mely-trabajando.webp" type="image/webp">
+              <img src="assets/img/mely-trabajando.jpg" width="1000" height="1777" loading="lazy" alt="Mely haciendo una manicura rusa con torno en su estudio" data-i18n-attr="alt:img.work" data-parallax="-10">
+            </picture>
+          </div>
+          <figure class="technique-video" data-clip>
+            <video muted loop playsinline preload="none" poster="assets/video/proceso-2.jpg" data-autoplay aria-label="Cutícula en seco con torno, en tiempo real" data-i18n-attr="aria-label:vid.proc">
+              <source src="assets/video/proceso-2.mp4" type="video/mp4">
+            </video>
+            <figcaption><i aria-hidden="true"></i><span data-i18n="vid.live">Así trabajo la cutícula</span></figcaption>
+          </figure>
         </div>
       </div>
       <ol class="technique-list" data-steps>
@@ -293,6 +303,49 @@
     </div>
   </section>
 
+  <!-- EN MOVIMIENTO -->
+  <section class="section reels-sec on-white" aria-labelledby="reels-title">
+    <div class="wrap looks-head">
+      <div>
+        <p class="eyebrow" data-i18n="reel.eyebrow">Recién salidas de mi mesa</p>
+        <h2 id="reels-title" data-split data-i18n="reel.h2">Mi trabajo <em>en movimiento</em></h2>
+      </div>
+      <p class="lead reveal" style="max-width:24em" data-i18n="reel.lead">Así brillan de verdad, sin filtros. Cada una, hecha por mí.</p>
+    </div>
+    <div class="reels" data-reels>
+        <figure class="reel">
+          <video muted loop playsinline preload="none" poster="assets/video/reel-blanco.jpg" data-autoplay aria-label="Blanco lechoso"><source src="assets/video/reel-blanco.mp4" type="video/mp4"></video>
+          <figcaption data-i18n="reel.1">Blanco lechoso</figcaption>
+        </figure>
+        <figure class="reel">
+          <video muted loop playsinline preload="none" poster="assets/video/reel-cromo.jpg" data-autoplay aria-label="Cromado"><source src="assets/video/reel-cromo.mp4" type="video/mp4"></video>
+          <figcaption data-i18n="reel.2">Cromado</figcaption>
+        </figure>
+        <figure class="reel">
+          <video muted loop playsinline preload="none" poster="assets/video/reel-rojo.jpg" data-autoplay aria-label="Rojo intenso"><source src="assets/video/reel-rojo.mp4" type="video/mp4"></video>
+          <figcaption data-i18n="reel.3">Rojo intenso</figcaption>
+        </figure>
+        <figure class="reel">
+          <video muted loop playsinline preload="none" poster="assets/video/reel-otono.jpg" data-autoplay aria-label="Verde otoño"><source src="assets/video/reel-otono.mp4" type="video/mp4"></video>
+          <figcaption data-i18n="reel.4">Verde otoño</figcaption>
+        </figure>
+        <figure class="reel">
+          <video muted loop playsinline preload="none" poster="assets/video/reel-vino.jpg" data-autoplay aria-label="Vino"><source src="assets/video/reel-vino.mp4" type="video/mp4"></video>
+          <figcaption data-i18n="reel.5">Vino</figcaption>
+        </figure>
+        <figure class="reel">
+          <video muted loop playsinline preload="none" poster="assets/video/reel-mix.jpg" data-autoplay aria-label="Mix de tonos"><source src="assets/video/reel-mix.mp4" type="video/mp4"></video>
+          <figcaption data-i18n="reel.6">Mix de tonos</figcaption>
+        </figure>
+    </div>
+    <div class="photo-strip" data-gallery-strip aria-hidden="true"></div>
+    <div class="wrap strip-cta">
+      <a class="btn" href="galeria.html" data-magnetic><span data-i18n="gal.cta">Ver galería completa</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <p class="muted" data-i18n="gal.count">+25 trabajos reales · nude, rojos, cromados y diseños</p>
+    </div>
+  </section>
+
   <dialog class="look-dialog" id="look-dialog" aria-labelledby="look-dlg-title">
     <button class="close" type="button" data-close aria-label="Cerrar" data-i18n-attr="aria-label:menu.closeShort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="inner">
@@ -318,9 +371,9 @@
         <h2 id="courses-title" data-split data-i18n="crs.h2">No te falta talento. <em>Te falta la técnica.</em></h2>
         <p class="lead reveal" style="color:var(--wine);margin-top:28px" data-i18n="crs.lead">Además de atender a mis clientas, soy educadora certificada. Te enseño en persona la misma técnica que uso en cada cita, en grupos pequeños, con práctica sobre modelo real y kit incluido. Formo manicuristas que hoy trabajan por su cuenta: la próxima puedes ser tú.</p>
         <div class="facts reveal">
-          <div><b data-count="2">2</b><span data-i18n="crs.f1">días · 8 h cada uno</span></div>
+          <div><b data-count="2">2</b><span data-i18n="crs.f1">días de clase</span></div>
           <div><b data-count="6">6</b><span data-i18n="crs.f2">cupos máximo</span></div>
-          <div><b>$<span data-count="1100" data-format="1">1,100</span></b><span data-i18n="crs.f3">manicura rusa</span></div>
+          <div><b>$<span data-count="550">550</span></b><span data-i18n="crs.f3">por curso</span></div>
         </div>
         <div class="hero-ctas reveal">
           <a class="btn" href="cursos.html" data-magnetic><span data-i18n="crs.cta">Quiero aprender</span>
@@ -446,7 +499,7 @@
       </div>
       <div>
         <h2 data-i18n="foot.explore">EXPLORA</h2>
-        <ul><li><a href="servicios.html" data-i18n="nav.services">Servicios</a></li><li><a href="cursos.html" data-i18n="nav.courses">Cursos</a></li><li><a href="reservar.html" data-i18n="cta.book">Reservar cita</a></li><li><a href="servicios.html#politicas" data-i18n="foot.policy">Políticas de cita</a></li></ul>
+        <ul><li><a href="servicios.html" data-i18n="nav.services">Servicios</a></li><li><a href="cursos.html" data-i18n="nav.courses">Cursos</a></li><li><a href="galeria.html" data-i18n="nav.gallery">Galería</a></li><li><a href="reservar.html" data-i18n="cta.book">Reservar cita</a></li><li><a href="servicios.html#politicas" data-i18n="foot.policy">Políticas de cita</a></li></ul>
       </div>
       <div>
         <h2 data-i18n="foot.follow">SÍGUENOS</h2>
@@ -478,6 +531,7 @@
 <script src="assets/js/main.js" defer></script>
 <script src="assets/js/nail.js" defer></script>
 <script src="assets/js/studio.js" defer></script>
+<script src="assets/js/gallery.js" defer></script>
 <script src="assets/js/motion.js" defer></script>
 </body>
 </html>

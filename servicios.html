@@ -32,13 +32,13 @@
     <nav class="nav" aria-label="Principal" data-i18n-attr="aria-label:nav.label">
       <a href="servicios.html" aria-current="page" data-i18n="nav.services">Servicios</a>
       <a href="cursos.html" data-i18n="nav.courses">Cursos</a>
-      <a href="./#looks" data-i18n="nav.looks">Looks</a>
+      <a href="galeria.html" data-i18n="nav.gallery">Galería</a>
       <a href="./#mely" data-i18n="nav.about">Sobre mí</a>
       <a href="./#visitanos" data-i18n="nav.visit">Visítanos</a>
     </nav>
     <div class="header-actions">
       <div class="lang" role="group" aria-label="Idioma / Language">
-        <button type="button" data-lang="es" aria-pressed="true">ES</button><span aria-hidden="true">/</span><button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><button type="button" data-lang="es" aria-pressed="true">ES</button><span aria-hidden="true">/</span><button type="button" data-lang="en" aria-pressed="false">EN</button>
       </div>
       <a class="btn header-cta" href="reservar.html" data-magnetic><span data-i18n="cta.book">Reservar cita</span></a>
       <button class="menu-btn" type="button" data-menu-open aria-controls="mobile-menu" aria-expanded="false" aria-label="Abrir menú" data-i18n-attr="aria-label:menu.open">
@@ -60,10 +60,12 @@
     <a href="./"><span data-i18n="nav.home">Inicio</span><small>01</small></a>
     <a href="servicios.html" aria-current="page"><span data-i18n="nav.services">Servicios</span><small>02</small></a>
     <a href="cursos.html"><span data-i18n="nav.courses">Cursos</span><small>03</small></a>
-    <a href="./#mely"><span data-i18n="nav.about">Sobre mí</span><small>04</small></a>
-    <a href="./#visitanos"><span data-i18n="nav.visit">Visítanos</span><small>05</small></a>
+    <a href="galeria.html"><span data-i18n="nav.gallery">Galería</span><small>04</small></a>
+    <a href="./#mely"><span data-i18n="nav.about">Sobre mí</span><small>05</small></a>
+    <a href="./#visitanos"><span data-i18n="nav.visit">Visítanos</span><small>06</small></a>
   </nav>
   <div class="foot">
+    <div class="lang-big" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es" aria-pressed="true">Español</button><button type="button" data-lang="en" aria-pressed="false">English</button></div>
     <a class="btn" href="reservar.html" data-i18n="cta.book">Reservar cita</a>
     <a class="btn btn--ghost" data-wa="hello" href="https://wa.me/18323104747" data-i18n="cta.wa">Escribir por WhatsApp</a>
   </div>
@@ -92,6 +94,22 @@
         <div><h3 data-i18n="pol.1t">Cambios y cancelaciones</h3><p data-i18n="pol.1p">Avísanos con al menos 24 horas de anticipación para cambiar o cancelar tu cita.</p></div>
         <div><h3 data-i18n="pol.2t">Tarjeta de garantía</h3><p data-i18n="pol.2p">Al reservar se guarda una tarjeta, pero no se cobra nada. Solo se aplica un cargo de $30 si no llegas o cancelas con menos de 24 horas.</p></div>
         <div><h3 data-i18n="pol.3t">Pago</h3><p data-i18n="pol.3p">Pagas al terminar tu cita. Se acepta tarjeta, Apple Pay y Google Pay.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section gift" aria-labelledby="gift-title">
+    <div class="wrap gift-inner">
+      <div class="gift-card" aria-hidden="true" data-tilt>
+        <img src="assets/img/logo-light.png" width="480" height="244" alt="" loading="lazy">
+        <span class="gift-label">Gift card</span>
+        <span class="gift-nail" data-nail data-bare data-polish="#E0B6B9" data-shape="almond"></span>
+      </div>
+      <div>
+        <p class="eyebrow" data-i18n="gift.eyebrow">Gift cards</p>
+        <h2 id="gift-title" data-split data-i18n="gift.h2">El regalo <em>perfecto</em></h2>
+        <p class="lead reveal" style="margin-top:24px" data-i18n="gift.lead">Regala una cita conmigo: tú eliges el monto o el servicio y yo me encargo del resto. Ideal para cumpleaños, Día de las Madres o simplemente porque sí.</p>
+        <a class="btn reveal" data-wa="gift" href="https://wa.me/18323104747" data-magnetic><span data-i18n="gift.cta">Quiero regalar una gift card</span></a>
       </div>
     </div>
   </section>
@@ -129,7 +147,7 @@
       </div>
       <div>
         <h2 data-i18n="foot.explore">EXPLORA</h2>
-        <ul><li><a href="servicios.html" data-i18n="nav.services">Servicios</a></li><li><a href="cursos.html" data-i18n="nav.courses">Cursos</a></li><li><a href="reservar.html" data-i18n="cta.book">Reservar cita</a></li><li><a href="servicios.html#politicas" data-i18n="foot.policy">Políticas de cita</a></li></ul>
+        <ul><li><a href="servicios.html" data-i18n="nav.services">Servicios</a></li><li><a href="cursos.html" data-i18n="nav.courses">Cursos</a></li><li><a href="galeria.html" data-i18n="nav.gallery">Galería</a></li><li><a href="reservar.html" data-i18n="cta.book">Reservar cita</a></li><li><a href="servicios.html#politicas" data-i18n="foot.policy">Políticas de cita</a></li></ul>
       </div>
       <div>
         <h2 data-i18n="foot.follow">SÍGUENOS</h2>

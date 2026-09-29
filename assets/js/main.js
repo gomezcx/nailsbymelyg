@@ -19,8 +19,18 @@
     if (q === "es" || q === "en") return q;
     var s = read("mely-lang");
     if (s === "es" || s === "en") return s;
-    return /^es\b/i.test(navigator.language || "") ? "es" : "en";
+    return deviceLang();
   }
+  // idioma del dispositivo: el primero de su lista que sea español o inglés
+  function deviceLang() {
+    var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+    for (var i = 0; i < list.length; i++) {
+      if (/^es\b/i.test(list[i])) return "es";
+      if (/^en\b/i.test(list[i])) return "en";
+    }
+    return "en";
+  }
+  var autoLang = !new URLSearchParams(location.search).get("lang") && !read("mely-lang");
 
   var I18N = {
     lang: initialLang(),
@@ -44,7 +54,7 @@
       });
       if (EN["meta.title." + document.body.dataset.page] && lang === "en") document.title = EN["meta.title." + document.body.dataset.page];
       else if (document.body.dataset.titleEs) document.title = document.body.dataset.titleEs;
-      document.querySelectorAll(".lang button").forEach(function (b) {
+      document.querySelectorAll("[data-lang]").forEach(function (b) {
         b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
       });
       document.dispatchEvent(new CustomEvent("langchange", { detail: lang }));
@@ -54,8 +64,8 @@
   document.body.dataset.titleEs = document.title;
 
   document.addEventListener("click", function (e) {
-    var b = e.target.closest(".lang button");
-    if (b) I18N.set(b.dataset.lang);
+    var b = e.target.closest("button[data-lang]");
+    if (b) { I18N.set(b.dataset.lang); hideHint(); }
   });
 
   /* ---------- Menú de teléfono ---------- */
@@ -111,6 +121,7 @@
       var msgs = {
         hello: I18N.t("Hola Mely, tengo una pregunta.", "Hi Mely, I have a question."),
         russian: I18N.t("Hola Mely, me interesa el curso de Manicura Rusa. ¿Qué fechas tienes disponibles?", "Hi Mely, I'm interested in the Russian Manicure course. What dates do you have available?"),
+        gift: I18N.t("Hola Mely, quiero regalar una gift card. ¿Cómo funciona?", "Hi Mely, I’d like to buy a gift card. How does it work?"),
         color: I18N.t("Hola Mely, busco un tono en particular. ¿Lo tienes?", "Hi Mely, I’m looking for a specific shade. Do you have it?"),
         gelx: I18N.t("Hola Mely, me interesa el curso de Gel-X. ¿Qué fechas tienes disponibles?", "Hi Mely, I'm interested in the Gel-X course. What dates do you have available?")
       };
@@ -363,6 +374,58 @@
     q("[data-close]").addEventListener("click", function () { dlg.close(); });
     dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
   }
+
+  /* ---------- Aviso de idioma (primera visita) ---------- */
+  // La web ya se abre en el idioma del dispositivo; este aviso deja cambiarlo con un toque.
+  var hint = null;
+  function hideHint() {
+    try { localStorage.setItem("mely-lang", I18N.lang); } catch (e) {}
+    if (hint) { hint.classList.remove("show"); setTimeout(function () { if (hint) hint.remove(); hint = null; }, 500); }
+  }
+  if (autoLang) {
+    hint = document.createElement("div");
+    hint.className = "lang-hint";
+    hint.setAttribute("role", "region");
+    hint.setAttribute("aria-label", "Idioma / Language");
+    var other = I18N.lang === "es" ? "en" : "es";
+    hint.innerHTML = '<span>' + (I18N.lang === "es" ? "Estás viendo la web en <b>español</b>" : "You’re viewing the site in <b>English</b>") + "</span>" +
+      '<button type="button" data-lang="' + other + '">' + (other === "en" ? "View in English" : "Ver en español") + "</button>" +
+      '<button type="button" class="x" data-hint-close aria-label="' + (I18N.lang === "es" ? "Cerrar" : "Close") + '">×</button>';
+    document.body.appendChild(hint);
+    setTimeout(function () { if (hint) hint.classList.add("show"); }, 2600);
+    setTimeout(function () { if (hint && !hint.matches(":hover, :focus-within")) hideHint(); }, 14000);
+    hint.querySelector("[data-hint-close]").addEventListener("click", hideHint);
+  }
+
+  /* ---------- Vídeos: solo se reproducen a la vista ---------- */
+  var vids = document.querySelectorAll("video[data-autoplay]");
+  var calm = matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator.connection && navigator.connection.saveData);
+  vids.forEach(function (v) {
+    if (calm) { v.controls = true; v.preload = "metadata"; }
+  });
+  if (!calm && vids.length && "IntersectionObserver" in window) {
+    var inView = [];
+    var tryPlay = function (v) { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); };
+    var vio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var v = en.target;
+        if (en.isIntersecting) {
+          if (inView.indexOf(v) < 0) inView.push(v);
+          if (v.preload === "none") v.preload = "auto";
+          tryPlay(v);
+        } else {
+          inView = inView.filter(function (x) { return x !== v; });
+          v.pause();
+        }
+      });
+    }, { threshold: .35 });
+    vids.forEach(function (v) { vio.observe(v); });
+    // si el navegador bloqueó la reproducción (pestaña oculta, ahorro de batería), se reintenta
+    var retry = function () { if (document.visibilityState === "visible") inView.forEach(function (v) { if (v.paused) tryPlay(v); }); };
+    document.addEventListener("visibilitychange", retry);
+    ["pointerdown", "touchstart", "keydown"].forEach(function (ev) { addEventListener(ev, retry, { passive: true }); });
+  }
+  carousel(document.querySelector("[data-reels]"));
 
   document.addEventListener("langchange", function () { refreshWa(); renderHours(); renderMenu(); renderStatus(); menuTabs(); });
   I18N.set(I18N.lang);

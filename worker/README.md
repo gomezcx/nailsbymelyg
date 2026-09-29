@@ -99,5 +99,5 @@ Cada hora, el Worker pregunta a Square qué citas empiezan dentro de 24 horas y 
    curl -X POST -H "X-Admin-Key: TU_CLAVE" "https://nailsbymelyg-api.<cuenta>.workers.dev/reminders/run?hours=24&to=correo-de-mely@ejemplo.com"
    ```
 
-La app de Square necesita permisos para leer citas (`APPOINTMENTS_READ`), clientas (`CUSTOMERS_READ`) y catálogo (`ITEMS_READ`).
+La app de Square necesita permisos para leer citas (`APPOINTMENTS_READ` y `APPOINTMENTS_ALL_READ`, para ver también las citas que no se hicieron desde la web), clientas (`CUSTOMERS_READ`) y catálogo (`ITEMS_READ`).
 

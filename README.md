@@ -40,6 +40,8 @@ HTML/CSS/JS sin frameworks ni build, publicada con GitHub Pages. Bilingüe ES/EN
 
 > El header y el footer se repiten en cada página: si cambias un enlace, cámbialo en las 5.
 
+> Los CSS/JS llevan `?v=AAAAMMDDHHMM` en cada página para que el móvil no use una versión vieja en caché. Al cambiar CSS o JS, sube ese número en todas las páginas.
+
 ## Reserva
 
 `reservar.html` funciona en tres modos:

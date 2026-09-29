@@ -425,7 +425,6 @@
     document.addEventListener("visibilitychange", retry);
     ["pointerdown", "touchstart", "keydown"].forEach(function (ev) { addEventListener(ev, retry, { passive: true }); });
   }
-  carousel(document.querySelector("[data-reels]"));
 
   document.addEventListener("langchange", function () { refreshWa(); renderHours(); renderMenu(); renderStatus(); menuTabs(); });
   I18N.set(I18N.lang);

@@ -294,5 +294,7 @@ window.MELY_EN = {
   "gift.eyebrow": "Gift cards",
   "gift.h2": "The perfect <em>gift</em>",
   "gift.lead": "Gift an appointment with me: you choose the amount or the service and I take care of the rest. Perfect for birthdays, Mother’s Day or just because.",
-  "gift.cta": "I want to give a gift card"
+  "gift.cta": "I want to give a gift card",
+  "reel.pause": "Pause",
+  "reel.label": "Nail reels"
 };

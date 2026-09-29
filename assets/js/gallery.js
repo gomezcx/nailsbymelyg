@@ -76,12 +76,73 @@
       return '<button type="button" data-cat="' + c.id + '" aria-pressed="' + (c.id === current) + '">' + (I.lang === "en" ? c.en : c.es) + " <sup>" + n + "</sup></button>";
     }).join("");
   }
+  // Mosaico sin huecos: algunas fotos van en grande (2×2, +3 celdas) y, si
+  // hace falta, alguna ancha (2×1, +1 celda) para que el total de celdas sea
+  // múltiplo de las columnas y cada fila quede completa.
+  function cols() { return getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 2; }
+  // Simula la colocación "dense" de CSS Grid y devuelve cuántas celdas quedan vacías.
+  function holes(sizes, c) {
+    var occ = [], rows = 0;
+    function free(r, col, w, h) {
+      if (col + w > c) return false;
+      for (var y = r; y < r + h; y++) for (var x = col; x < col + w; x++) if (occ[y] && occ[y][x]) return false;
+      return true;
+    }
+    sizes.forEach(function (sz) {
+      var w = sz[0], h = sz[1];
+      for (var r = 0; ; r++) {
+        for (var col = 0; col < c; col++) {
+          if (free(r, col, w, h)) {
+            for (var y = r; y < r + h; y++) { occ[y] = occ[y] || []; for (var x = col; x < col + w; x++) occ[y][x] = 1; }
+            rows = Math.max(rows, r + h);
+            return;
+          }
+        }
+      }
+    });
+    var used = 0; occ.forEach(function (row) { if (row) row.forEach(function (v) { used += v ? 1 : 0; }); });
+    return rows * c - used;
+  }
+  function plan(nItems, c) {
+    var pref = Math.max(1, Math.round(nItems / (c < 3 ? 9 : 6)));
+    var order = [pref];
+    for (var d = 1; d <= nItems; d++) { if (pref - d >= 0) order.push(pref - d); if (pref + d <= nItems / 3) order.push(pref + d); }
+    for (var oi = 0; oi < order.length; oi++) {
+      var big = order[oi];
+      if (big * 3 > nItems * 3) continue;
+      for (var wide = 0; wide <= c * 2; wide++) {
+        if ((nItems + 3 * big + wide) % c) continue;
+        if (big + wide > nItems) continue;
+        var out = {}, i, k;
+        for (i = 0; i < big; i++) out[Math.min(nItems - 1, Math.floor(i * nItems / big))] = "is-big";
+        for (i = 0, k = nItems - 2; i < wide && k >= 0; k--) if (!out[k]) { out[k] = "is-wide"; i++; }
+        if (i < wide) continue;
+        var sizes = [];
+        for (i = 0; i < nItems; i++) sizes.push(out[i] === "is-big" ? [2, 2] : out[i] === "is-wide" ? [2, 1] : [1, 1]);
+        if (!holes(sizes, c)) return out;
+      }
+    }
+    return {};
+  }
+  var k;
+  function spans() {
+    var p = plan(view.length, cols());
+    grid.querySelectorAll(".g-item").forEach(function (el, i) {
+      el.classList.remove("is-big", "is-wide");
+      if (p[i]) el.classList.add(p[i]);
+    });
+  }
+  var lastCols = 0;
+  addEventListener("resize", function () { var c = cols(); if (c !== lastCols) { lastCols = c; spans(); } });
+
   function renderGrid(animate) {
     view = PICS.filter(function (p) { return current === "all" || p[1] === current; });
     grid.innerHTML = view.map(function (p, i) {
       return '<button type="button" class="g-item" id="' + p[0] + '" data-i="' + i + '" data-cursor="' + t("Ver", "View") + '">' + pic(p, false) +
-        '<span class="g-cap">' + name(p) + "</span></button>";
+        '<span class="g-cap"><small>' + ("0" + (i + 1)).slice(-2) + "</small>" + name(p) + "</span></button>";
     }).join("");
+    lastCols = cols();
+    spans();
     if (animate && grid.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       grid.querySelectorAll(".g-item").forEach(function (el, i) {
         el.animate([{ opacity: 0, transform: "translateY(40px) scale(.96)" }, { opacity: 1, transform: "none" }],

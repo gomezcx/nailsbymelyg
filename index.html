@@ -305,38 +305,50 @@
 
   <!-- EN MOVIMIENTO -->
   <section class="section reels-sec on-white" aria-labelledby="reels-title">
-    <div class="wrap looks-head">
-      <div>
+    <div class="wrap reels-layout">
+      <div class="reels-copy">
         <p class="eyebrow" data-i18n="reel.eyebrow">Recién salidas de mi mesa</p>
         <h2 id="reels-title" data-split data-i18n="reel.h2">Mi trabajo <em>en movimiento</em></h2>
+        <p class="lead reveal" data-i18n="reel.lead">Así brillan de verdad, sin filtros. Cada una, hecha por mí.</p>
+        <div class="reels-now reveal" aria-live="polite">
+          <span class="reels-num"><b data-reels-num>01</b> / 06</span>
+          <span class="reels-name"><i data-reels-chip></i><span data-reels-name>Blanco lechoso</span></span>
+        </div>
+        <div class="reels-ctrl reveal">
+          <button class="icon-btn" type="button" data-reels-prev aria-label="Anterior" data-i18n-attr="aria-label:bk.prevItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button class="icon-btn" type="button" data-reels-toggle aria-label="Pausar" data-i18n-attr="aria-label:reel.pause"><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg><svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></button>
+          <button class="icon-btn" type="button" data-reels-next aria-label="Siguiente" data-i18n-attr="aria-label:bk.nextItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
       </div>
-      <p class="lead reveal" style="max-width:24em" data-i18n="reel.lead">Así brillan de verdad, sin filtros. Cada una, hecha por mí.</p>
-    </div>
-    <div class="reels" data-reels>
-        <figure class="reel">
-          <video muted loop playsinline preload="none" poster="assets/video/reel-blanco.jpg" data-autoplay aria-label="Blanco lechoso"><source src="assets/video/reel-blanco.mp4" type="video/mp4"></video>
-          <figcaption data-i18n="reel.1">Blanco lechoso</figcaption>
-        </figure>
-        <figure class="reel">
-          <video muted loop playsinline preload="none" poster="assets/video/reel-cromo.jpg" data-autoplay aria-label="Cromado"><source src="assets/video/reel-cromo.mp4" type="video/mp4"></video>
-          <figcaption data-i18n="reel.2">Cromado</figcaption>
-        </figure>
-        <figure class="reel">
-          <video muted loop playsinline preload="none" poster="assets/video/reel-rojo.jpg" data-autoplay aria-label="Rojo intenso"><source src="assets/video/reel-rojo.mp4" type="video/mp4"></video>
-          <figcaption data-i18n="reel.3">Rojo intenso</figcaption>
-        </figure>
-        <figure class="reel">
-          <video muted loop playsinline preload="none" poster="assets/video/reel-otono.jpg" data-autoplay aria-label="Verde otoño"><source src="assets/video/reel-otono.mp4" type="video/mp4"></video>
-          <figcaption data-i18n="reel.4">Verde otoño</figcaption>
-        </figure>
-        <figure class="reel">
-          <video muted loop playsinline preload="none" poster="assets/video/reel-vino.jpg" data-autoplay aria-label="Vino"><source src="assets/video/reel-vino.mp4" type="video/mp4"></video>
-          <figcaption data-i18n="reel.5">Vino</figcaption>
-        </figure>
-        <figure class="reel">
-          <video muted loop playsinline preload="none" poster="assets/video/reel-mix.jpg" data-autoplay aria-label="Mix de tonos"><source src="assets/video/reel-mix.mp4" type="video/mp4"></video>
-          <figcaption data-i18n="reel.6">Mix de tonos</figcaption>
-        </figure>
+      <div class="reels-stage" data-reels-stage tabindex="0" role="region" aria-roledescription="carrusel" aria-label="Reels de trabajos" data-i18n-attr="aria-label:reel.label">
+        <div class="reels-bars" data-reels-bars aria-hidden="true"></div>
+        <div class="reels-deck" data-reels>
+          <figure class="reel" data-reel style="--c:#F2ECE8">
+            <video muted playsinline preload="none" poster="assets/video/reel-blanco.jpg" aria-label="Blanco lechoso"><source src="assets/video/reel-blanco.mp4" type="video/mp4"></video>
+            <figcaption class="sr-only" data-i18n="reel.1">Blanco lechoso</figcaption>
+          </figure>
+          <figure class="reel" data-reel style="--c:#C9C3BF">
+            <video muted playsinline preload="none" poster="assets/video/reel-cromo.jpg" aria-label="Cromado"><source src="assets/video/reel-cromo.mp4" type="video/mp4"></video>
+            <figcaption class="sr-only" data-i18n="reel.2">Cromado</figcaption>
+          </figure>
+          <figure class="reel" data-reel style="--c:#B0301F">
+            <video muted playsinline preload="none" poster="assets/video/reel-rojo.jpg" aria-label="Rojo intenso"><source src="assets/video/reel-rojo.mp4" type="video/mp4"></video>
+            <figcaption class="sr-only" data-i18n="reel.3">Rojo intenso</figcaption>
+          </figure>
+          <figure class="reel" data-reel style="--c:#5E6B45">
+            <video muted playsinline preload="none" poster="assets/video/reel-otono.jpg" aria-label="Verde otoño"><source src="assets/video/reel-otono.mp4" type="video/mp4"></video>
+            <figcaption class="sr-only" data-i18n="reel.4">Verde otoño</figcaption>
+          </figure>
+          <figure class="reel" data-reel style="--c:#4A1E26">
+            <video muted playsinline preload="none" poster="assets/video/reel-vino.jpg" aria-label="Vino"><source src="assets/video/reel-vino.mp4" type="video/mp4"></video>
+            <figcaption class="sr-only" data-i18n="reel.5">Vino</figcaption>
+          </figure>
+          <figure class="reel" data-reel style="--c:#7A5A4A">
+            <video muted playsinline preload="none" poster="assets/video/reel-mix.jpg" aria-label="Mix de tonos"><source src="assets/video/reel-mix.mp4" type="video/mp4"></video>
+            <figcaption class="sr-only" data-i18n="reel.6">Mix de tonos</figcaption>
+          </figure>
+        </div>
+      </div>
     </div>
     <div class="photo-strip" data-gallery-strip aria-hidden="true"></div>
     <div class="wrap strip-cta">
@@ -532,6 +544,7 @@
 <script src="assets/js/nail.js" defer></script>
 <script src="assets/js/studio.js" defer></script>
 <script src="assets/js/gallery.js" defer></script>
+<script src="assets/js/reels.js" defer></script>
 <script src="assets/js/motion.js" defer></script>
 </body>
 </html>

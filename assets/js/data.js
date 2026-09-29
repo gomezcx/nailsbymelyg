@@ -52,7 +52,7 @@ window.MELY_DATA = {
     { id: "men", group: "otros", price: 80, min: 95, sq: "Manicure & pedicure for Men's",
       es: ["Manicura y pedicura para hombres", "Manos y pies limpios, cuidados y sin brillo."],
       en: ["Men’s manicure & pedicure", "Clean, groomed hands and feet, no shine."] },
-    { id: "kids", group: "otros", price: 55, min: 90, sq: "Manicure and Pedicure for children",
+    { id: "kids", group: "otros", price: 55, min: 90, sq: "Manicure and Pedicure Service for children",
       es: ["Manicura y pedicura para niños", "Una experiencia cuidadosa para los más pequeños."],
       en: ["Kids’ manicure & pedicure", "A gentle experience for little ones."] },
     { id: "removal", group: "otros", price: 15, min: 35, sq: "Service to Remove Previous Product", addon: true,

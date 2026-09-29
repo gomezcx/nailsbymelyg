@@ -9,11 +9,11 @@ window.MELY_CONFIG = {
   apiBase: "https://nailsbymelyg-api.nailsbymelyg.workers.dev",
 
   // Web Payments SDK de Square (tarjeta de garantía de la reserva y pago de gift cards).
-  // App de Square: "Web nailsbymelyg". Ahora en PRUEBAS (sandbox). Para pasar a real:
-  //   squareEnv: "production", squareAppId: "sq0idp-as0w6-6pNTmIv70WkB-yyw", squareLocationId: "LB3NRH4R7V151"
-  squareEnv: "sandbox",
-  squareAppId: "sandbox-sq0idb-SWer2OtA1EUd0pcITtaXcw",
-  squareLocationId: "L12K90NNX8GG7",
+  // App de Square: "Web nailsbymelyg", en PRODUCCIÓN. Para volver a pruebas:
+  //   squareEnv: "sandbox", squareAppId: "sandbox-sq0idb-SWer2OtA1EUd0pcITtaXcw", squareLocationId: "L12K90NNX8GG7"
+  squareEnv: "production",
+  squareAppId: "sq0idp-as0w6-6pNTmIv70WkB-yyw",
+  squareLocationId: "LB3NRH4R7V151",
 
   // Respaldo: reserva de Square de siempre
   squareBookingUrl: "https://book.squareup.com/appointments/k5i21phbyenjqm/location/LB3NRH4R7V151",

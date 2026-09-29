@@ -350,7 +350,9 @@ function b64url(str) {
 // cada cita recibe un solo aviso por cada N) → correo personalizado.
 
 // Nombre en Square → nombre de la web [es, en] (copiado de assets/js/data.js, campo "sq")
-const SERVICE_NAMES = {"manicure russo & gel (shellac)":["Manicura rusa + gel","Russian manicure + gel"],"russian manicure & rubber base":["Manicura rusa + rubber base","Russian manicure + rubber base"],"russian manicure & builder gel":["Manicura rusa + builder gel","Russian manicure + builder gel"],"manicure russo & gel x":["Manicura rusa + Gel‑X","Russian manicure + Gel‑X"],"manicure russo & poly gel":["Manicura rusa + Poly Gel","Russian manicure + Poly Gel"],"manicure natural nails & poly gel":["Uñas naturales + Poly Gel","Natural nails + Poly Gel"],"manicure extension nails & builder gel":["Extensiones + builder gel","Extensions + builder gel"],"russian pedicure & gel (shellac)":["Pedicura rusa + gel","Russian pedicure + gel"],"russian pedicure & rubber base":["Pedicura rusa + rubber base","Russian pedicure + rubber base"],"manicure & pedicure for men's":["Manicura y pedicura para hombres","Men’s manicure & pedicure"],"manicure and pedicure for children":["Manicura y pedicura para niños","Kids’ manicure & pedicure"],"service to remove previous product":["Retirada de producto anterior","Removal of previous product"]};
+const SERVICE_NAMES = {"manicure russo & gel (shellac)": ["Manicura rusa + gel", "Russian manicure + gel"], "russian manicure & rubber base": ["Manicura rusa + rubber base", "Russian manicure + rubber base"], "russian manicure & builder gel": ["Manicura rusa + builder gel", "Russian manicure + builder gel"], "manicure russo & gel x": ["Manicura rusa + Gel‑X", "Russian manicure + Gel‑X"], "manicure russo & poly gel": ["Manicura rusa + Poly Gel", "Russian manicure + Poly Gel"], "manicure natural nails & poly gel": ["Uñas naturales + Poly Gel", "Natural nails + Poly Gel"], "manicure extension nails & builder gel": ["Extensiones + builder gel", "Extensions + builder gel"], "russian pedicure & gel (shellac)": ["Pedicura rusa + gel", "Russian pedicure + gel"], "russian pedicure & rubber base": ["Pedicura rusa + rubber base", "Russian pedicure + rubber base"], "manicure & pedicure for men's": ["Manicura y pedicura para hombres", "Men’s manicure & pedicure"], "service to remove previous product": ["Retirada de producto anterior", "Removal of previous product"], "manicure and pedicure service for children": ["Manicura y pedicura para niños", "Kids’ manicure & pedicure"]};
+
+function normName(n) { return String(n).toLowerCase().replace(/[\u2018\u2019`]/g, "'").replace(/\s+/g, " ").trim(); }
 
 async function runReminders(env, opt) {
   const now = opt.now ? new Date(opt.now) : new Date();
@@ -408,7 +410,7 @@ async function reminderInfo(env, b) {
     const items = {};
     (r.related_objects || []).forEach((o) => { if (o.type === "ITEM") items[o.id] = o.item_data.name; });
     services = (r.objects || []).map((o) => items[o.item_variation_data?.item_id] || o.item_variation_data?.name).filter(Boolean)
-      .map((n) => { const w = SERVICE_NAMES[n.toLowerCase()]; return w ? w[en ? 1 : 0] : n; });
+      .map((n) => { const w = SERVICE_NAMES[normName(n)]; return w ? w[en ? 1 : 0] : n; });
   }
   const start = new Date(b.start_at);
   const loc = en ? "en-US" : "es-US";

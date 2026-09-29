@@ -159,7 +159,8 @@
       return c;
     });
   }
-  function norm(s) { return String(s).toLowerCase().replace(/\s+/g, " ").trim(); }
+  // tolera espacios dobles, mayúsculas y apóstrofos curvos (’) de los nombres en Square
+  function norm(s) { return String(s).toLowerCase().replace(/[\u2018\u2019`]/g, "'").replace(/\s+/g, " ").trim(); }
   function loadCatalog() {
     if (S.catalog) return Promise.resolve();
     return api("/services").then(function (r) {

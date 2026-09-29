@@ -53,7 +53,7 @@ Para activar el modo conectado, sigue [`worker/README.md`](worker/README.md).
 
 - [ ] Gift cards: conectar el Worker (ver `worker/README.md` › Gift cards con Square) y probar en sandbox. Hasta entonces el pedido llega por WhatsApp.
 
-- [ ] En Square la ubicación sigue siendo **25450 Farmstead Prairie Pl, Katy 77493**. Hay que cambiarla a 2727 N Mason Rd, Suite 301 (Square › Settings › Locations), porque sale en los correos de confirmación.
+- [x] Dirección de la sucursal "Nailsbymelyg" en Square actualizada a 2727 N Mason Rd Ste 301, Katy, TX 77449 (las sucursales "Mely" y "Dilmelys Garcia" no son del salón y no se tocaron).
 - [ ] En Square el horario (L–V 10–5:15, S 8:30–3, D 10–4) no coincide con Google Maps (L–S 9–6, D 11–3). La reserva en línea usa el de Square: hay que igualarlos.
 - [ ] Fotos: retrato de Mely en buena resolución y fotos de trabajos para una galería.
 - [ ] Confirmar qué incluye el kit del curso de manicura rusa y el temario de Gel‑X.

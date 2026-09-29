@@ -30,6 +30,7 @@ export default {
     const log = (tag) => (e) => console.error(tag, e.stack || e, e.details ? JSON.stringify(e.details) : "");
     if (new Date(event.scheduledTime).getUTCMinutes() < 15) ctx.waitUntil(runReminders(env, { now: event.scheduledTime }).catch(log("REMINDERS")));
     ctx.waitUntil(autoCancelUnconfirmed(env, { now: event.scheduledTime }).catch(log("AUTOCANCEL")));
+    ctx.waitUntil(courseSecondHalf(env, { now: event.scheduledTime }).catch(log("COURSE CHARGE")));
   },
 
   async fetch(request, env, ctx) {
@@ -56,6 +57,12 @@ export default {
       if (request.method === "POST" && url.pathname === "/giftcard/purchase") return json(await giftPurchase(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/waitlist") return json(await waitlistJoin(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/lookup") return json(await confirmLookup(env, await body(request)), 200, cors);
+      if (request.method === "POST" && url.pathname === "/course/availability") return json(await courseAvailability(env, await body(request), ctx), 200, cors);
+      if (request.method === "POST" && url.pathname === "/course/book") return json(await courseBook(env, await body(request), ctx), 200, cors);
+      if (request.method === "POST" && url.pathname === "/admin/courses/setup") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        return json(await coursesSetup(env, url.searchParams.has("dry")), 200, cors);
+      }
       if (request.method === "POST" && url.pathname === "/confirm/token") return json(await confirmByToken(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/answer") return json(await confirmAnswer(env, await body(request), ctx), 200, cors);
       if (request.method === "POST" && url.pathname === "/confirm/run") {
@@ -103,10 +110,10 @@ async function sq(env, path, payload, method) {
   return data;
 }
 
-async function services(env, ctx) {
+async function services(env, ctx, fresh) {
   const cache = caches.default;
   const key = new Request("https://cache.local/services/" + env.SQUARE_LOCATION_ID);
-  const hit = await cache.match(key);
+  const hit = fresh ? null : await cache.match(key);
   if (hit) return hit.json();
 
   const out = [];
@@ -485,6 +492,7 @@ async function autoCancelUnconfirmed(env, opt) {
   for (const b of list) {
     if (b.status !== "ACCEPTED") continue;
     if (String(b.seller_note || "").includes(CONFIRM_MARK)) continue;
+    if (String(b.seller_note || "").includes(COURSE_MARK)) continue; // los cursos ya están pagados a medias
     // solo citas reservadas después de activar la política (las anteriores no la aceptaron)
     if (!env.CONFIRM_SINCE || Date.parse(b.created_at) < Date.parse(env.CONFIRM_SINCE)) continue;
     // solo si reservó con más de 24 h (recibió el recordatorio con el enlace para confirmar)
@@ -700,6 +708,187 @@ async function resend(env, to, subject, html, text) {
   });
   if (!r.ok) throw new Error("Resend " + r.status + " " + (await r.text()).slice(0, 200));
   return true;
+}
+
+/* ---------------- Cursos ---------------- */
+// Se reservan como una cita privada: la alumna elige un día libre de la agenda (el ruso, dos días seguidos)
+// y ese horario queda bloqueado en Square. Al inscribirse paga el 50 % con Square; la tarjeta queda
+// guardada y el otro 50 % se cobra solo cuando termina el curso (cron).
+
+const COURSE_MARK = "🎓 Curso";
+const COURSES = {
+  russian: { name: "Curso Manicura Rusa", days: 2, price: 550, es: "Manicura rusa desde cero", en: "Russian manicure from scratch" },
+  gelx: { name: "Curso Gel-X", days: 1, price: 550, es: "Gel-X", en: "Gel-X" },
+};
+const COURSE_START = "09:00", COURSE_HOURS = 8;
+
+async function coursesSetup(env, dry) {
+  const list = (await services(env, { waitUntil() {} }, true)).services;
+  const sample = list.find((x) => !/curso/i.test(x.name));
+  if (!sample) throw new Error("No hay servicios de ejemplo");
+  const v = (await sq(env, "/v2/catalog/object/" + sample.id)).object;
+  const team = v.item_variation_data.team_member_ids || [];
+  const todo = Object.entries(COURSES).filter(([, c]) => !list.some((x) => x.name === c.name));
+  const objects = todo.map(([key, c]) => ({
+    type: "ITEM", id: "#" + key, present_at_all_locations: false, present_at_location_ids: [env.SQUARE_LOCATION_ID],
+    item_data: {
+      name: c.name, product_type: "APPOINTMENTS_SERVICE",
+      description: "Curso privado de " + c.days + " día" + (c.days > 1 ? "s" : "") + ", " + COURSE_START + "–" + (9 + COURSE_HOURS) + ":00. Se paga 50 % al inscribirse y 50 % al terminar.",
+      variations: [{
+        type: "ITEM_VARIATION", id: "#" + key + "-v", present_at_all_locations: false, present_at_location_ids: [env.SQUARE_LOCATION_ID],
+        item_variation_data: {
+          name: "Día de curso", pricing_type: "FIXED_PRICING", price_money: { amount: Math.round(c.price * 100 / c.days), currency: "USD" },
+          service_duration: COURSE_HOURS * 3600e3, available_for_booking: true, team_member_ids: team,
+        },
+      }],
+    },
+  }));
+  if (dry || !objects.length) return { dry, create: objects.map((o) => o.item_data.name), existing: list.filter((x) => /curso/i.test(x.name)).map((x) => x.name) };
+  const r = await sq(env, "/v2/catalog/batch-upsert", { idempotency_key: crypto.randomUUID(), batches: [{ objects }] });
+  await caches.default.delete(new Request("https://cache.local/services/" + env.SQUARE_LOCATION_ID));
+  return { created: (r.objects || []).filter((o) => o.type === "ITEM").map((o) => ({ name: o.item_data.name, id: o.id })) };
+}
+
+async function courseVariation(env, ctx, key) {
+  const c = COURSES[key];
+  if (!c) throw bad("Invalid course");
+  const v = (await services(env, ctx)).services.find((x) => x.name === c.name);
+  if (!v) { const e = new Error("Course not set up"); e.status = 503; e.public = "Course not available"; throw e; }
+  return { c, v };
+}
+
+function localParts(iso, tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return { date: p.year + "-" + p.month + "-" + p.day, time: p.hour + ":" + p.minute };
+}
+
+async function courseDays(env, v, c, from, to) {
+  const tz = env.TIMEZONE || TZ_DEFAULT;
+  const list = await searchAvailability(env, [v.id], from.toISOString(), to.toISOString());
+  const byDay = {};
+  for (const a of list) { const l = localParts(a.start_at, tz); if (l.time === COURSE_START && !byDay[l.date]) byDay[l.date] = a; }
+  // el 2.º día (curso ruso) es el siguiente día libre completo, como mucho a 7 días del primero
+  const sorted = Object.keys(byDay).sort(), out = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const days = [byDay[sorted[i]]];
+    for (let j = i + 1; j < sorted.length && days.length < c.days; j++) {
+      if ((Date.parse(sorted[j]) - Date.parse(sorted[i])) / 864e5 <= 7) days.push(byDay[sorted[j]]);
+    }
+    if (days.length === c.days) out.push({ date: sorted[i], slots: days });
+  }
+  return out;
+}
+
+async function courseAvailability(env, b, ctx) {
+  const { c, v } = await courseVariation(env, ctx, b.course);
+  const from = new Date(Date.now() + 48 * 3600e3); // con 2 días de margen para preparar el kit
+  const days = await courseDays(env, v, c, from, new Date(from.getTime() + 31 * 864e5));
+  return { days: days.map((x) => ({ date: x.date, dates: x.slots.map((s) => s.start_at) })), price: c.price, deposit: c.price / 2, daysPerCourse: c.days };
+}
+
+async function findOrCreateCustomer(env, cu, idem) {
+  const found = await sq(env, "/v2/customers/search", { query: { filter: { email_address: { exact: cu.email } } }, limit: 1 });
+  if (found.customers && found.customers.length) return found.customers[0].id;
+  const created = await sq(env, "/v2/customers", { idempotency_key: idem + "-c", given_name: cu.given, family_name: cu.family, email_address: cu.email, phone_number: cu.phone, reference_id: "web" });
+  return created.customer.id;
+}
+
+async function courseBook(env, b, ctx) {
+  const k = b.customer || {};
+  const clean = (x, n) => String(x || "").trim().slice(0, n);
+  const cu = { given: clean(k.givenName, 60), family: clean(k.familyName, 60), email: clean(k.email, 120).toLowerCase(), phone: clean(k.phone, 20) };
+  if (!cu.given || !cu.family) throw bad("Name required");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cu.email)) throw bad("Invalid email");
+  if (!/^\+\d{10,15}$/.test(cu.phone)) throw bad("Invalid phone");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date || "")) throw bad("Invalid date");
+  if (!b.cardToken) throw Object.assign(bad("Card required"), { code: "CARD" });
+  const idem = clean(b.idempotencyKey, 40) || crypto.randomUUID();
+  const { c, v } = await courseVariation(env, ctx, b.course);
+
+  // ¿siguen libres esos días? (lo que diga Square)
+  const from = new Date(Date.parse(b.date + "T00:00:00Z") - 864e5);
+  const pick = (await courseDays(env, v, c, from, new Date(from.getTime() + (c.days + 2) * 864e5))).find((x) => x.date === b.date);
+  if (!pick) { const e = new Error("Slot taken"); e.status = 409; e.code = "SLOT_TAKEN"; e.public = "Slot taken"; throw e; }
+
+  const customerId = await findOrCreateCustomer(env, cu, idem);
+  let cardId;
+  try {
+    cardId = (await sq(env, "/v2/cards", { idempotency_key: idem + "-k", source_id: String(b.cardToken), card: { customer_id: customerId } })).card.id;
+  } catch (err) { err.code = "CARD"; err.public = "Card declined"; err.status = 402; throw err; }
+
+  const half = Math.round(c.price * 100 / 2);
+  let payment;
+  try {
+    payment = (await sq(env, "/v2/payments", {
+      idempotency_key: idem + "-p1", source_id: cardId, customer_id: customerId, location_id: env.SQUARE_LOCATION_ID,
+      amount_money: { amount: half, currency: "USD" }, autocomplete: true, reference_id: "curso-" + b.course,
+      note: c.name + " · 1ª mitad (50 %) · " + cu.given + " " + cu.family,
+    })).payment;
+  } catch (err) { err.code = "CARD"; err.public = "Card declined"; err.status = 402; throw err; }
+
+  const note = COURSE_MARK + ": " + c.name + " · pagado 50 % ($" + half / 100 + "). El otro 50 % se cobra solo a la tarjeta guardada al terminar el curso.";
+  const ids = [];
+  try {
+    for (let i = 0; i < pick.slots.length; i++) {
+      const a = pick.slots[i];
+      const r = await sq(env, "/v2/bookings", {
+        idempotency_key: idem + "-b" + i,
+        booking: {
+          start_at: a.start_at, location_id: env.SQUARE_LOCATION_ID, customer_id: customerId,
+          appointment_segments: a.appointment_segments,
+          customer_note: c.name + (c.days > 1 ? " · día " + (i + 1) + " de " + c.days : "") + " · inscrita desde nailsbymelyg.com (" + (b.lang === "en" ? "EN" : "ES") + ")",
+          seller_note: note,
+        },
+      });
+      ids.push(r.booking.id);
+    }
+  } catch (err) {
+    // no se pudo apartar: se deshace todo y se devuelve el dinero
+    for (const id of ids) {
+      const bk = (await sq(env, "/v2/bookings/" + id).catch(() => ({}))).booking;
+      if (bk) await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: "undo-" + id, booking_version: bk.version }).catch(() => {});
+    }
+    await sq(env, "/v2/refunds", { idempotency_key: idem + "-rf", payment_id: payment.id, amount_money: { amount: half, currency: "USD" }, reason: "No se pudo apartar la fecha del curso" }).catch((e) => console.error("REFUND", e.stack || e));
+    const e = new Error("Slot taken"); e.status = 409; e.code = "SLOT_TAKEN"; e.public = "Slot taken"; throw e;
+  }
+
+  // segunda mitad: al terminar el último día
+  const last = pick.slots[pick.slots.length - 1];
+  const chargeAt = new Date(Date.parse(last.start_at) + COURSE_HOURS * 3600e3).toISOString();
+  await env.WAITLIST.put("course:" + ids[0], JSON.stringify({ course: b.course, bookingIds: ids, customerId, cardId, amount: c.price * 100 - half, chargeAt, status: "pending", name: cu.given + " " + cu.family, firstPayment: payment.id }));
+
+  return { bookings: ids, dates: pick.slots.map((s) => s.start_at), paid: half / 100, remaining: (c.price * 100 - half) / 100, receiptUrl: payment.receipt_url || null };
+}
+
+async function courseSecondHalf(env, opt) {
+  const now = opt.now ? new Date(opt.now) : new Date();
+  const out = [];
+  let cursor;
+  do {
+    const l = await env.WAITLIST.list({ prefix: "course:", cursor });
+    for (const k of l.keys) {
+      const rec = await env.WAITLIST.get(k.name, "json");
+      if (!rec || rec.status !== "pending" || Date.parse(rec.chargeAt) > now.getTime()) continue;
+      // si alguna de las citas del curso se canceló, no se cobra: lo decide Mely
+      const states = await Promise.all(rec.bookingIds.map((id) => sq(env, "/v2/bookings/" + id).then((r) => r.booking.status).catch(() => "UNKNOWN")));
+      if (states.some((st) => st !== "ACCEPTED")) { rec.status = "skipped:" + states.join(","); }
+      else if (!opt.dry) {
+        try {
+          const p = (await sq(env, "/v2/payments", {
+            idempotency_key: "course2-" + rec.bookingIds[0], source_id: rec.cardId, customer_id: rec.customerId, location_id: env.SQUARE_LOCATION_ID,
+            amount_money: { amount: rec.amount, currency: "USD" }, autocomplete: true, reference_id: "curso-" + rec.course,
+            note: COURSES[rec.course].name + " · 2ª mitad (50 %) · " + rec.name,
+          })).payment;
+          rec.status = "charged"; rec.secondPayment = p.id;
+        } catch (e) { rec.status = "failed"; rec.error = String(e.message || e).slice(0, 200); console.error("COURSE 2", e.stack || e); }
+      }
+      if (!opt.dry) await env.WAITLIST.put(k.name, JSON.stringify(rec));
+      out.push({ key: k.name, status: rec.status });
+    }
+    cursor = l.list_complete ? null : l.cursor;
+  } while (cursor);
+  return out;
 }
 
 /* ---------------- utilidades ---------------- */

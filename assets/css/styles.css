@@ -1189,3 +1189,15 @@ html { overflow-x: clip; }
 .bk-ticket-info dt { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #E0B6B9; padding-top: 3px; }
 .bk-ticket-info dd { margin: 0; font-size: 16px; font-weight: 500; }
 .bk-ticket-sign { margin: 18px 0 0; text-align: right; font-family: var(--serif); font-style: italic; font-size: 26px; }
+
+/* inscripción a cursos */
+.course-book .wrap { grid-template-columns: minmax(0, 760px); }
+.cb-h { font-size: clamp(22px, 2.4vw, 28px); margin: 44px 0 16px; padding-top: 24px; border-top: 1px solid var(--wine-line); }
+.cb-dates { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 12px; min-height: 60px; }
+.cb-date { padding: 12px 14px; text-align: left; font-size: 15px; line-height: 1.35; }
+.cb-date b { font-weight: 500; }
+.cb-pay { margin: 8px 0 14px; padding: 16px 18px; background: var(--paper-2); border: 1px solid var(--wine-line); border-left: 3px solid var(--wine); font-size: 15px; }
+.cb-pay p { margin: 0 0 6px; }
+.cb-pay p:last-child { margin: 0; }
+.cb-pick { color: var(--wine); font-weight: 500; }
+#cb-done-h, #st4 { outline: none; }

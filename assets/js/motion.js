@@ -228,13 +228,7 @@
     if (line) ST.create({ trigger: steps, start: "top 60%", end: "bottom 60%", scrub: true, onUpdate: function (s) { line.style.setProperty("--p", s.progress.toFixed(3)); } });
   }
 
-  /* ---------- Estudio: los dedos suben ---------- */
-  var fingers = g.utils.toArray("[data-hand] .finger");
-  if (fingers.length) {
-    g.from(fingers, { yPercent: 70, duration: 1.6, ease: E, stagger: .1, scrollTrigger: { trigger: "[data-hand]", start: "top 90%", once: true },
-      onComplete: function () { g.set(fingers, { clearProps: "transform" }); } });
-    g.from(".studio .ctrl, .studio-actions", { y: 30, autoAlpha: 0, duration: 1, ease: E, stagger: .08, scrollTrigger: { trigger: "[data-studio]", start: "top 85%", once: true } });
-  }
+  /* ---------- Estudio: las uñas y los controles se ven al instante (sin entrada) ---------- */
 
   /* ---------- Looks: scroll horizontal fijado (escritorio) ---------- */
   var looks = document.querySelector("[data-looks]");

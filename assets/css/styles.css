@@ -840,11 +840,16 @@ p { margin: 0 0 1em; }
   .studio .wrap { display: block; }
   .studio-panel { margin-top: 36px; }
   .studio-actions .btn { width: 100%; padding: 0 20px; letter-spacing: .12em; }
-  .studio-stage { position: sticky; top: calc(var(--header-h) + 8px); transition: top .6s var(--ease); z-index: 5; aspect-ratio: 1 / .62; box-shadow: 0 24px 40px -28px rgba(58, 24, 32, .45); }
+  .studio-stage { position: sticky; top: calc(var(--header-h) + 8px); transition: top .6s var(--ease); z-index: 5; aspect-ratio: 1 / .74; box-shadow: 0 24px 40px -28px rgba(58, 24, 32, .45); }
   .hdr-hidden .studio-stage { top: 8px; }
   .studio-stage .label { top: 14px; }
   .studio-stage .label b { font-size: 17px; }
-  .hand { width: 100%; margin-bottom: -10%; }
+  /* móvil: las cuatro uñas enteras a la vista */
+  .hand { width: 86%; margin-bottom: -6%; }
+  .hand .f1, .studio-stage:hover .hand .f1 { transform: translateY(8%) rotate(-5deg); }
+  .hand .f2 { transform: translateY(0) rotate(-1deg); }
+  .hand .f3 { transform: translateY(4%) rotate(2.5deg); }
+  .hand .f4, .studio-stage:hover .hand .f4 { transform: translateY(14%) rotate(7deg); }
   .seg span { font-size: 12px; padding: 10px 2px; }
 }
 

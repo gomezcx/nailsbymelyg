@@ -59,6 +59,19 @@ export default {
       if (request.method === "POST" && url.pathname === "/confirm/lookup") return json(await confirmLookup(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/course/availability") return json(await courseAvailability(env, await body(request), ctx), 200, cors);
       if (request.method === "POST" && url.pathname === "/course/book") return json(await courseBook(env, await body(request), ctx), 200, cors);
+      if (request.method === "POST" && url.pathname === "/admin/booking/cancel") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        const id = url.searchParams.get("id") || "";
+        if (!/^[a-z0-9]{8,40}$/i.test(id)) throw bad("Invalid id");
+        const bk = (await sq(env, "/v2/bookings/" + id)).booking;
+        if (bk.status !== "ACCEPTED" && bk.status !== "PENDING") return json({ id, status: bk.status }, 200, cors);
+        const r = await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: "admin-" + id + "-" + bk.version, booking_version: bk.version });
+        return json({ id, status: r.booking.status, start: r.booking.start_at }, 200, cors);
+      }
+      if (request.method === "POST" && url.pathname === "/admin/courses/online") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        return json(await coursesOnline(env, url.searchParams.get("on") === "1"), 200, cors);
+      }
       if (request.method === "POST" && url.pathname === "/admin/courses/setup") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
         return json(await coursesSetup(env, url.searchParams.has("dry")), 200, cors);
@@ -126,7 +139,8 @@ async function services(env, ctx, fresh) {
       cursor,
     });
     for (const item of r.items || []) {
-      const v = (item.item_data.variations || []).find((x) => x.item_variation_data?.available_for_booking !== false);
+      const isCourse = Object.values(COURSES).some((c) => c.name === item.item_data.name); // los cursos se ocultan en Square pero se reservan desde la web
+      const v = (item.item_data.variations || []).find((x) => isCourse || x.item_variation_data?.available_for_booking !== false);
       if (!v) continue;
       out.push({
         name: item.item_data.name,
@@ -747,6 +761,20 @@ async function coursesSetup(env, dry) {
   const r = await sq(env, "/v2/catalog/batch-upsert", { idempotency_key: crypto.randomUUID(), batches: [{ objects }] });
   await caches.default.delete(new Request("https://cache.local/services/" + env.SQUARE_LOCATION_ID));
   return { created: (r.objects || []).filter((o) => o.type === "ITEM").map((o) => ({ name: o.item_data.name, id: o.id })) };
+}
+
+// los cursos no se reservan en la página de Square (ahí no se cobra el 50 %): solo desde la web
+async function coursesOnline(env, on) {
+  const list = (await services(env, { waitUntil() {} }, true)).services.filter((x) => Object.values(COURSES).some((c) => c.name === x.name));
+  const objects = [];
+  for (const x of list) {
+    const v = (await sq(env, "/v2/catalog/object/" + x.id)).object;
+    v.item_variation_data.available_for_booking = on;
+    objects.push(v);
+  }
+  if (objects.length) await sq(env, "/v2/catalog/batch-upsert", { idempotency_key: crypto.randomUUID(), batches: [{ objects }] });
+  await caches.default.delete(new Request("https://cache.local/services/" + env.SQUARE_LOCATION_ID));
+  return { updated: list.map((x) => x.name), available_for_booking: on };
 }
 
 async function courseVariation(env, ctx, key) {

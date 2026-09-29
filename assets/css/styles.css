@@ -1006,12 +1006,15 @@ p { margin: 0 0 1em; }
 /* ---------- Diseñador de gift cards ---------- */
 .gc { padding-top: 56px; }
 .gc-layout { display: grid; gap: 40px; align-items: start; }
+/* La tarjeta es una réplica a escala: todo se mide respecto a su ancho (--cw), igual en móvil y en ordenador */
+.gc-preview { container-type: inline-size; min-width: 0; }
 @media (min-width: 1000px) { .gc-layout { grid-template-columns: 6fr 5fr; gap: 72px; } .gc-preview { position: sticky; top: calc(var(--header-h) + 24px); } }
 .gc-card {
   --ink: #F3ECE8; --accent: #E0B6B9;
   position: relative; overflow: hidden; isolation: isolate;
-  aspect-ratio: 1.6 / 1; width: 100%; max-width: 640px; border-radius: 22px;
-  padding: clamp(18px, 3.4vw, 36px); color: var(--ink);
+  --cw: min(100cqw, 640px);
+  aspect-ratio: 1.6 / 1; width: var(--cw); max-width: 100%; border-radius: calc(var(--cw) * .034);
+  padding: calc(var(--cw) * .056); color: var(--ink);
   display: grid; grid-template-rows: auto 1fr auto;
   background: linear-gradient(135deg, #8A4453 0%, #662E3A 55%, #4E222C 100%);
   box-shadow: 0 50px 90px -40px rgba(58, 24, 32, .7), inset 0 1px 0 rgba(255,255,255,.18);
@@ -1028,16 +1031,16 @@ p { margin: 0 0 1em; }
 .gc-mono { position: absolute; right: 4%; bottom: -22%; z-index: -1; font-family: var(--serif); font-style: italic; font-size: 72cqw; line-height: 1; color: var(--ink); opacity: .09; pointer-events: none; }
 .gc-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .gc-logo { width: 26%; height: auto; }
-.gc-label { font-size: clamp(10px, 1.9cqw, 13px); letter-spacing: .32em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
-.gc-mid { align-self: center; max-width: 72%; }
-.gc-for { display: block; font-family: var(--serif); font-style: italic; font-size: clamp(22px, 7.5cqw, 46px); line-height: 1.05; overflow-wrap: anywhere; }
-.gc-for small, .gc-meta small { font-family: var(--sans); font-style: normal; font-size: clamp(9px, 1.8cqw, 12px); letter-spacing: .2em; text-transform: uppercase; opacity: .75; margin-right: 4px; vertical-align: middle; }
-.gc-msg { margin: 8px 0 0; font-size: clamp(11px, 2.5cqw, 16px); line-height: 1.4; opacity: .9; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.gc-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
-.gc-amount { font-family: var(--serif); font-weight: 500; font-size: clamp(34px, 12cqw, 78px); line-height: .9; }
-.gc-amount.is-service { font-size: clamp(16px, 4.6cqw, 30px); font-style: italic; font-weight: 400; max-width: 60%; line-height: 1.1; }
-.gc-meta { display: grid; justify-items: end; gap: 4px; font-size: clamp(11px, 2.3cqw, 15px); text-align: right; }
-.gc-meta code { font-size: clamp(9px, 1.9cqw, 12px); letter-spacing: .12em; color: var(--accent); }
+.gc-label { font-size: 1.9cqw; letter-spacing: .32em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
+.gc-mid { align-self: center; max-width: 74%; }
+.gc-for { display: block; font-family: var(--serif); font-style: italic; font-size: 7.2cqw; line-height: 1.05; overflow-wrap: anywhere; }
+.gc-for small, .gc-meta small { font-family: var(--sans); font-style: normal; font-size: 1.8cqw; letter-spacing: .2em; text-transform: uppercase; opacity: .75; margin-right: .6cqw; vertical-align: middle; }
+.gc-msg { margin: 1.25cqw 0 0; font-size: 3.1cqw; line-height: 1.4; opacity: .9; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.gc-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.9cqw; }
+.gc-amount { font-family: var(--serif); font-weight: 500; font-size: 12cqw; line-height: .9; }
+.gc-amount.is-service { font-size: 4.6cqw; font-style: italic; font-weight: 400; max-width: 60%; line-height: 1.1; }
+.gc-meta { display: grid; justify-items: end; gap: .6cqw; font-size: 2.7cqw; text-align: right; }
+.gc-meta code { font-size: 2.2cqw; letter-spacing: .12em; color: var(--accent); }
 .gc-nail { position: absolute; right: 10%; top: 14%; width: 11%; transform: rotate(18deg); filter: drop-shadow(0 16px 16px rgba(0,0,0,.35)); z-index: 1; }
 .gc-nail .nail-svg { width: 100%; height: auto; display: block; }
 .gc-note { margin-top: 16px; font-size: 14px; color: var(--wine-soft); text-align: center; max-width: 640px; }
@@ -1079,10 +1082,15 @@ p { margin: 0 0 1em; }
   .gc-preview { position: sticky; top: var(--header-h); z-index: 5; transition: top .6s var(--ease); background: var(--paper); margin: 0 calc(var(--gutter) * -1); padding: 10px var(--gutter) 14px; box-shadow: 0 18px 24px -20px rgba(58,24,32,.35); }
   .hdr-hidden .gc-preview { top: 0; }
   .gc-note { display: none; }
-  .gc-card { max-width: 440px; margin: 0 auto; }
+  .gc-card { --cw: min(100cqw, 440px); margin: 0 auto; }
 }
 
 /* gift card: pago, vista de quien la recibe y saldo */
+.gc-save { border: 0; padding: 20px var(--gutter) 24px; width: min(560px, 100%); max-width: 100%; max-height: 100dvh; background: var(--paper); color: var(--wine); text-align: center; }
+.gc-save::backdrop { background: rgba(30, 12, 16, .6); }
+.gc-save img { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 24px 48px -24px rgba(58,24,32,.6); -webkit-touch-callout: default; user-select: auto; }
+.gc-save p { margin: 16px 0 0; font-size: 15px; color: var(--wine-soft); }
+.gc-save .step-actions { justify-content: center; margin-top: 16px; }
 .gc-card-box { min-height: 96px; margin: 6px 0 12px; }
 .gc-viewer { align-self: center; }
 .gc-viewer h2 { font-size: clamp(38px, 5vw, 64px); margin-bottom: 18px; }

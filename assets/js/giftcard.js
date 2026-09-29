@@ -375,11 +375,38 @@
         x.fillText(t("PENDIENTE DE ACTIVACIÓN", "PENDING ACTIVATION"), 0, 16); x.restore();
       }
       if (nimg) { x.save(); x.translate(1330, 360); x.rotate(.3); x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 40; x.shadowOffsetY = 20; x.drawImage(nimg, -112, -246, 224, 492); x.restore(); }
+      var name = "gift-card-nails-by-melyg-" + (issued ? issued.gan.slice(-4) : code) + ".png";
+      if (matchMedia("(pointer: coarse)").matches) return saveSheet(cv, name);
       var a = document.createElement("a");
-      a.download = "gift-card-nails-by-melyg-" + (issued ? issued.gan.slice(-4) : code) + ".png";
+      a.download = name;
       a.href = cv.toDataURL("image/png");
       document.body.appendChild(a); a.click(); a.remove();
     });
+  }
+  // En el móvil la descarga falla dentro de WhatsApp/Instagram: se enseña la imagen
+  // para compartirla (Fotos, WhatsApp…) o guardarla manteniéndola presionada.
+  function saveSheet(cv, name) {
+    var url = cv.toDataURL("image/png");
+    var dlg = document.createElement("dialog");
+    dlg.className = "gc-save";
+    dlg.innerHTML = '<img alt="">' +
+      '<p>' + t("Mantén presionada la imagen para guardarla en tus fotos.", "Press and hold the image to save it to your photos.") + '</p>' +
+      '<div class="step-actions"><button class="btn" type="button" data-share hidden><span>' + t("Compartir o guardar", "Share or save") + '</span></button>' +
+      '<button class="back-link" type="button" data-close>' + t("Cerrar", "Close") + '</button></div>';
+    dlg.querySelector("img").src = url;
+    document.body.appendChild(dlg);
+    var close = function () { dlg.close(); dlg.remove(); };
+    dlg.querySelector("[data-close]").addEventListener("click", close);
+    dlg.addEventListener("cancel", function () { dlg.remove(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) close(); });
+    cv.toBlob(function (blob) {
+      if (!blob || !window.File || !navigator.canShare) return;
+      var file = new File([blob], name, { type: "image/png" });
+      if (!navigator.canShare({ files: [file] })) return;
+      var sb = dlg.querySelector("[data-share]"); sb.hidden = false;
+      sb.addEventListener("click", function () { navigator.share({ files: [file], title: "Gift card · Nails by MelyG" }).catch(function () {}); });
+    }, "image/png");
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
   }
   ["[data-gc-download]", "[data-gc-download2]", "[data-gc-download3]"].forEach(function (sel) { var b = $(sel); if (b) b.addEventListener("click", download); });
   if (issued === null && S.code === undefined) S.code = code;

@@ -22,7 +22,10 @@ MAPS_URL = "https://maps.app.goo.gl/jeEr8PQE1xyBjdHz8"
 
 # Confirmación de asistencia: "1" cancela 1 h antes las citas sin confirmar (reservadas con +24 h). "0" lo apaga.
 REQUIRE_CONFIRM = "1"
-CONFIRM_SINCE = "2026-09-29T17:16:00Z"   # solo citas reservadas desde aquí (las anteriores nunca se cancelan solas)
+CONFIRM_SINCE = "2026-09-29T17:16:00Z"   # citas reservadas desde aquí
+# Aplica la confirmación también a citas reservadas antes, desde esta fecha de cita (vacío = apagado).
+# Encenderlo solo cuando el SMS de recordatorio de Square lleve el enlace nailsbymelyg.com/confirmar.
+CONFIRM_ALL_FROM = ""
 
 [[kv_namespaces]]
 binding = "WAITLIST"

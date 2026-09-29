@@ -508,7 +508,10 @@ async function autoCancelUnconfirmed(env, opt) {
     if (String(b.seller_note || "").includes(CONFIRM_MARK)) continue;
     if (String(b.seller_note || "").includes(COURSE_MARK)) continue; // los cursos ya están pagados a medias
     // solo citas reservadas después de activar la política (las anteriores no la aceptaron)
-    if (!env.CONFIRM_SINCE || Date.parse(b.created_at) < Date.parse(env.CONFIRM_SINCE)) continue;
+    // CONFIRM_ALL_FROM: desde esa fecha de cita, también las reservas antiguas (clientas avisadas por el recordatorio)
+    const newPolicy = env.CONFIRM_SINCE && Date.parse(b.created_at) >= Date.parse(env.CONFIRM_SINCE);
+    const allFrom = env.CONFIRM_ALL_FROM && Date.parse(b.start_at) >= Date.parse(env.CONFIRM_ALL_FROM);
+    if (!newPolicy && !allFrom) continue;
     // solo si reservó con más de 24 h (recibió el recordatorio con el enlace para confirmar)
     if (Date.parse(b.start_at) - Date.parse(b.created_at) < 24 * 3600e3) continue;
     if (!opt.dry) {

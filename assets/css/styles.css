@@ -1223,3 +1223,5 @@ html { overflow-x: clip; }
 .cb-date b { font-size: 17px; }
 .cb-n { position: absolute; top: 8px; right: 10px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; background: var(--on-wine); color: var(--wine); }
 #cb-hours b { color: var(--wine); font-weight: 600; }
+/* títulos que reciben el foco al cambiar de paso: sin recuadro */
+.step h1[tabindex="-1"]:focus, .done-box h1[tabindex="-1"]:focus { outline: none; }

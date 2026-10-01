@@ -9,8 +9,8 @@ ALLOWED_ORIGINS = "https://nailsbymelyg.com,https://www.nailsbymelyg.com,http://
 SITE_URL = "https://nailsbymelyg.com"
 # Opcional: correo de las gift cards con Resend (resend.com). La clave va como secreto:
 #   npx wrangler secret put RESEND_API_KEY
-MAIL_FROM = ""                       # ej. "Nails by MelyG <giftcards@nailsbymelyg.com>"
-NOTIFY_EMAIL = ""                    # correo de Mely (avisos de gift cards y "responder a" de los recordatorios)
+MAIL_FROM = "Nails by MelyG <citas@nailsbymelyg.com>"                       # ej. "Nails by MelyG <giftcards@nailsbymelyg.com>"
+NOTIFY_EMAIL = "dilmedilmelysgarcia@gmail.com"                    # correo de Mely (avisos de gift cards y "responder a" de los recordatorios)
 
 # Recordatorios de cita por correo (usan RESEND_API_KEY y MAIL_FROM)
 REMINDER_HOURS = "24"                # horas antes de la cita; "24,2" manda también uno 2 h antes

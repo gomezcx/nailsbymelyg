@@ -68,6 +68,17 @@ export default {
         const r = await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: "admin-" + id + "-" + bk.version, booking_version: bk.version });
         return json({ id, status: r.booking.status, start: r.booking.start_at }, 200, cors);
       }
+      if (request.method === "POST" && url.pathname === "/admin/mail/test") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        const to = url.searchParams.get("to") || "";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw bad("Invalid email");
+        const kind = url.searchParams.get("kind") === "reminder" ? "reminder" : "booked";
+        const site = (env.SITE_URL || "https://nailsbymelyg.com").replace(/\/$/, "");
+        const demo = { en: false, name: url.searchParams.get("name") || "Dilmelys", start: new Date(Date.now() + 864e5), minutes: 90, services: ["Manicura rusa + gel"], date: "Jueves, 1 de octubre", time: "9:00 a. m.", when: "jueves 1 de octubre 9:00 a. m.", confirmUrl: site + "/confirmar.html" };
+        const mail = reminderMail(env, demo, kind === "reminder" ? 24 : 0, kind === "booked" ? "booked" : undefined);
+        await resend(env, to, "[Prueba] " + mail.subject, mail.html, mail.text);
+        return json({ sent: true, to, subject: mail.subject }, 200, cors);
+      }
       if (request.method === "POST" && url.pathname === "/admin/text/test") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
         if (!texting(env)) return json({ error: "Twilio no está configurado" }, 400, cors);

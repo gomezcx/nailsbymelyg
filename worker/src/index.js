@@ -30,6 +30,7 @@ export default {
     const log = (tag) => (e) => console.error(tag, e.stack || e, e.details ? JSON.stringify(e.details) : "");
     if (new Date(event.scheduledTime).getUTCMinutes() < 15) ctx.waitUntil(runReminders(env, { now: event.scheduledTime }).catch(log("REMINDERS")));
     ctx.waitUntil(autoCancelUnconfirmed(env, { now: event.scheduledTime }).catch(log("AUTOCANCEL")));
+    ctx.waitUntil(warnUnconfirmed(env, { now: event.scheduledTime }).catch(log("WARN UNCONFIRMED")));
     ctx.waitUntil(courseSecondHalf(env, { now: event.scheduledTime }).catch(log("COURSE CHARGE")));
   },
 
@@ -67,6 +68,18 @@ export default {
         if (bk.status !== "ACCEPTED" && bk.status !== "PENDING") return json({ id, status: bk.status }, 200, cors);
         const r = await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: "admin-" + id + "-" + bk.version, booking_version: bk.version });
         return json({ id, status: r.booking.status, start: r.booking.start_at }, 200, cors);
+      }
+      if (request.method === "POST" && url.pathname === "/admin/bookings") { // revisión: citas de un rango con su estado
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        const list = await listBookings(env, new Date(url.searchParams.get("from")), new Date(url.searchParams.get("to")));
+        const out = [];
+        for (const b of list) {
+          const c = b.customer_id ? await sq(env, "/v2/customers/" + b.customer_id).then((r) => r.customer).catch(() => ({})) : {};
+          out.push({ id: b.id, start: b.start_at, status: b.status, created: b.created_at, updated: b.updated_at, source: b.source,
+            creator: b.creator_details && b.creator_details.creator_type, name: (c.given_name || "") + " " + (c.family_name || ""), phone: c.phone_number || "", email: !!c.email_address, emailOff: !!(c.preferences && c.preferences.email_unsubscribed),
+            confirmed: String(b.seller_note || "").includes(CONFIRM_MARK), note: String(b.seller_note || "").slice(0, 80) });
+        }
+        return json(out, 200, cors);
       }
       if (request.method === "POST" && url.pathname === "/admin/mail/test") {
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
@@ -523,6 +536,28 @@ async function confirmAnswer(env, b, ctx) {
   throw bad("Invalid answer");
 }
 
+// En vez de cancelar: 3 h antes, a Mely le llega un correo con las citas que nadie confirmó,
+// con un botón de WhatsApp para escribir a la clienta. Nada se cancela solo.
+async function warnUnconfirmed(env, opt) {
+  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.NOTIFY_EMAIL) return { skipped: "mail" };
+  const now = opt.now ? new Date(opt.now) : new Date();
+  const from = new Date(now.getTime() + 3 * 3600e3), to = new Date(from.getTime() + 15 * 60e3); // misma ventana que el cron
+  const list = (await listBookings(env, from, to)).filter((b) => b.status === "ACCEPTED"
+    && !String(b.seller_note || "").includes(CONFIRM_MARK) && !String(b.seller_note || "").includes(COURSE_MARK));
+  const rows = [];
+  for (const b of list) {
+    const info = await reminderInfo(env, b);
+    const phone = (info.phone || "").replace(/\D/g, "");
+    const wa = phone ? "https://wa.me/" + phone + "?text=" + encodeURIComponent("Hola " + (info.name || "") + " 💅 Te escribo para confirmar tu cita de hoy a las " + info.time + ". ¿Todo bien? — Mely") : "";
+    rows.push(`<tr><td style="padding:10px 0;border-top:1px solid #D9C3C0"><b>${info.time}</b> · ${info.name || "Clienta"}<br><span style="color:#7E5560">${info.services.join(" + ")}</span></td>
+      <td style="padding:10px 0;border-top:1px solid #D9C3C0;text-align:right">${wa ? `<a href="${wa}" style="background:#25D366;color:#fff;padding:8px 12px;text-decoration:none;font:600 13px Arial">WhatsApp</a>` : ""}</td></tr>`);
+  }
+  if (!rows.length || opt.dry) return { checkedAt: now.toISOString(), pending: rows.length };
+  const html = `<div style="font:15px Arial,sans-serif;color:#4E222C;max-width:520px"><p>Hola Mely 👋 Estas citas empiezan en unas 3 horas y la clienta <b>todavía no ha confirmado</b> en la web. No se cancelan: si quieres, escríbele.</p><table style="width:100%;border-collapse:collapse">${rows.join("")}</table></div>`;
+  await resend(env, env.NOTIFY_EMAIL, "Citas sin confirmar (en 3 h): " + rows.length, html, "Citas sin confirmar en 3 horas: " + rows.length);
+  return { checkedAt: now.toISOString(), sent: rows.length };
+}
+
 async function autoCancelUnconfirmed(env, opt) {
   if (env.REQUIRE_CONFIRM === "0") return { disabled: true };
   const now = opt.now ? new Date(opt.now) : new Date();
@@ -539,6 +574,8 @@ async function autoCancelUnconfirmed(env, opt) {
     if (!newPolicy && !allFrom) continue;
     // solo si reservó con más de 24 h (recibió el recordatorio con el enlace para confirmar)
     if (Date.parse(b.start_at) - Date.parse(b.created_at) < 24 * 3600e3) continue;
+    // nunca cancelar a quien no le llegó NUESTRO aviso con el botón de confirmar (correo o SMS propio)
+    if (!(await env.WAITLIST.get("notified:" + b.id))) continue;
     if (!opt.dry) {
       await sq(env, "/v2/bookings/" + b.id + "/cancel", { idempotency_key: "auto-" + b.id + "-" + b.version, booking_version: b.version });
       await notifyWaitlist(env, b).catch((e) => console.error("WAITLIST", e.stack || e));
@@ -633,11 +670,15 @@ async function runReminders(env, opt) {
         let chat = null;
         if (texting(env) && (info.phone || opt.testPhone)) {
           chat = opt.dry ? "dry" : await sendText(env, opt.testPhone || info.phone, chatText(info, h > 3 ? "reminder" : "soon")).catch((e) => "error: " + e.message);
+          if (!opt.dry && !opt.testPhone && h > 3 && chat && typeof chat === "object") await env.WAITLIST.put("notified:" + b.id, "text", { expirationTtl: 4 * 864e5 });
         }
         if (!info.email || info.unsubscribed || !env.RESEND_API_KEY || !env.MAIL_FROM) { report.push({ booking: b.id, chat, mail: "skipped" }); continue; }
         const mail = reminderMail(env, info, h);
         const target = opt.testTo || info.email;
-        if (!opt.dry) await resend(env, target, mail.subject, mail.html, mail.text);
+        if (!opt.dry) {
+          await resend(env, target, mail.subject, mail.html, mail.text);
+          if (!opt.testTo && h > 3) await env.WAITLIST.put("notified:" + b.id, "mail", { expirationTtl: 4 * 864e5 });
+        }
         report.push({ booking: b.id, to: target, when: info.when, hours: h, sent: !opt.dry, subject: mail.subject, chat });
       } catch (e) {
         console.error("REMINDER", b.id, e.stack || e);
@@ -729,7 +770,7 @@ function reminderMail(env, i, hours, kind) {
         <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;color:#7E5560">${en ? "When" : "Cuándo"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0"><b>${esc(i.date)}</b><br>${esc(i.time)} <span style="color:#7E5560">(${en ? "Houston time" : "hora de Houston"})</span></td></tr>
         <tr><td style="padding:12px 0;border-top:1px solid #D9C3C0;border-bottom:1px solid #D9C3C0;color:#7E5560">${en ? "Where" : "Dónde"}</td><td style="padding:12px 0;border-top:1px solid #D9C3C0;border-bottom:1px solid #D9C3C0"><a href="${maps}" style="color:#662E3A">${esc(address)}</a></td></tr>
       </table>
-      ${i.confirmUrl ? `<p style="font:15px Arial,sans-serif;line-height:1.6;margin:26px 0 12px">${en ? "Please confirm you’re coming. If it isn’t confirmed 1 hour before, the spot is released." : "Confirma que vienes, por favor. Si no está confirmada 1 hora antes, la cita se libera."}</p><p style="margin:0">${btn(i.confirmUrl, en ? "Confirm my appointment" : "Confirmar mi cita", true)}</p>` : ""}
+      ${i.confirmUrl ? `<p style="font:15px Arial,sans-serif;line-height:1.6;margin:26px 0 12px">${en ? "Please confirm you’re coming so I can have everything ready for you." : "Confírmame que vienes, porfa, y te lo tengo todo listo."}</p><p style="margin:0">${btn(i.confirmUrl, en ? "Confirm my appointment" : "Confirmar mi cita", true)}</p>` : ""}
       <div style="margin:26px 0 8px">${btn(maps, en ? "Get directions" : "Cómo llegar", true)}${btn(gcal, en ? "Add to calendar" : "Añadir al calendario", false)}</div>
       <p style="font:14px Arial,sans-serif;line-height:1.6;color:#7E5560;margin:18px 0">${en
         ? "Coming in with gel or acrylic from another salon? Let me know so I can plan the removal. If you need to change or cancel, please message me at least 24 hours ahead."
@@ -759,8 +800,8 @@ function chatText(i, kind) {
     ? `💕 ${hi ? hi + ", " : ""}see you in a little while at ${i.time}! 📍 ${place}. — Mely`
     : `💕 ${hi ? hi + ", " : ""}¡te espero en un ratito, a las ${i.time}! 📍 ${place}. — Mely`;
   return en
-    ? `💅 Hi ${hi || "there"}! Tomorrow I'm waiting for you at ${i.time} at Nails by MelyG. Please confirm here (if it's not confirmed 1 h before, the spot is released): ${i.confirmUrl} — Mely`
-    : `💅 ¡Hola ${hi || "linda"}! Mañana te espero a las ${i.time} en Nails by MelyG. Confírmame aquí, porfa (si no está confirmada 1 h antes, la cita se libera): ${i.confirmUrl} — Mely`;
+    ? `💅 Hi ${hi || "there"}! Tomorrow I'm waiting for you at ${i.time} at Nails by MelyG. Please confirm here: ${i.confirmUrl} — Mely`
+    : `💅 ¡Hola ${hi || "linda"}! Mañana te espero a las ${i.time} en Nails by MelyG. Confírmame aquí, porfa: ${i.confirmUrl} — Mely`;
 }
 
 async function sendText(env, to, body) {

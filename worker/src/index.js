@@ -526,11 +526,13 @@ async function confirmAnswer(env, b, ctx) {
       const note = ((bk.seller_note ? bk.seller_note + "\n" : "") + CONFIRM_MARK + " (" + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC)").slice(0, 4000);
       await sq(env, "/v2/bookings/" + id, { idempotency_key: crypto.randomUUID(), booking: { version: bk.version, seller_note: note } }, "PUT");
     }
+    if (texting(env) && env.NOTIFY_PHONE) ctx && ctx.waitUntil(reminderInfo(env, bk).then((i) => sendText(env, env.NOTIFY_PHONE, "Nails by MelyG ✅ " + (i.name || "Una clienta") + " confirmó su cita: " + i.when)).catch(() => {}));
     return { status: "confirmed" };
   }
   if (b.answer === "no") {
     await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: crypto.randomUUID(), booking_version: bk.version });
     ctx && ctx.waitUntil(notifyWaitlist(env, bk).catch((e) => console.error("WAITLIST", e.stack || e)));
+    if (texting(env) && env.NOTIFY_PHONE) ctx && ctx.waitUntil(reminderInfo(env, bk).then((i) => sendText(env, env.NOTIFY_PHONE, "Nails by MelyG ❌ " + (i.name || "Una clienta") + " canceló su cita: " + i.when + ". Se avisó a la lista de espera.")).catch(() => {}));
     return { status: "cancelled" };
   }
   throw bad("Invalid answer");
@@ -539,7 +541,7 @@ async function confirmAnswer(env, b, ctx) {
 // En vez de cancelar: 3 h antes, a Mely le llega un correo con las citas que nadie confirmó,
 // con un botón de WhatsApp para escribir a la clienta. Nada se cancela solo.
 async function warnUnconfirmed(env, opt) {
-  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.NOTIFY_EMAIL) return { skipped: "mail" };
+  if (!texting(env) || !env.NOTIFY_PHONE) return { skipped: "sms" };
   const now = opt.now ? new Date(opt.now) : new Date();
   const from = new Date(now.getTime() + 3 * 3600e3), to = new Date(from.getTime() + 15 * 60e3); // misma ventana que el cron
   const list = (await listBookings(env, from, to)).filter((b) => b.status === "ACCEPTED"
@@ -548,13 +550,10 @@ async function warnUnconfirmed(env, opt) {
   for (const b of list) {
     const info = await reminderInfo(env, b);
     const phone = (info.phone || "").replace(/\D/g, "");
-    const wa = phone ? "https://wa.me/" + phone + "?text=" + encodeURIComponent("Hola " + (info.name || "") + " 💅 Te escribo para confirmar tu cita de hoy a las " + info.time + ". ¿Todo bien? — Mely") : "";
-    rows.push(`<tr><td style="padding:10px 0;border-top:1px solid #D9C3C0"><b>${info.time}</b> · ${info.name || "Clienta"}<br><span style="color:#7E5560">${info.services.join(" + ")}</span></td>
-      <td style="padding:10px 0;border-top:1px solid #D9C3C0;text-align:right">${wa ? `<a href="${wa}" style="background:#25D366;color:#fff;padding:8px 12px;text-decoration:none;font:600 13px Arial">WhatsApp</a>` : ""}</td></tr>`);
+    rows.push(info.time + " " + (info.name || "clienta") + (phone ? " (" + phone + ")" : ""));
   }
   if (!rows.length || opt.dry) return { checkedAt: now.toISOString(), pending: rows.length };
-  const html = `<div style="font:15px Arial,sans-serif;color:#4E222C;max-width:520px"><p>Hola Mely 👋 Estas citas empiezan en unas 3 horas y la clienta <b>todavía no ha confirmado</b> en la web. No se cancelan: si quieres, escríbele.</p><table style="width:100%;border-collapse:collapse">${rows.join("")}</table></div>`;
-  await resend(env, env.NOTIFY_EMAIL, "Citas sin confirmar (en 3 h): " + rows.length, html, "Citas sin confirmar en 3 horas: " + rows.length);
+  await sendText(env, env.NOTIFY_PHONE, "Nails by MelyG ⏰ Sin confirmar (en 3 h): " + rows.join(" · ") + ". Escríbeles si quieres.");
   return { checkedAt: now.toISOString(), sent: rows.length };
 }
 
@@ -575,7 +574,13 @@ async function autoCancelUnconfirmed(env, opt) {
     // solo si reservó con más de 24 h (recibió el recordatorio con el enlace para confirmar)
     if (Date.parse(b.start_at) - Date.parse(b.created_at) < 24 * 3600e3) continue;
     // nunca cancelar a quien no le llegó NUESTRO aviso con el botón de confirmar (correo o SMS propio)
-    if (!(await env.WAITLIST.get("notified:" + b.id))) continue;
+    // aviso válido: nuestro correo con el botón, o el SMS de recordatorio de Square (lleva el enlace) si tiene teléfono
+    let notified = !!(await env.WAITLIST.get("notified:" + b.id));
+    if (!notified && env.CONFIRM_SQUARE_SMS_FROM && Date.parse(b.start_at) >= Date.parse(env.CONFIRM_SQUARE_SMS_FROM) && b.customer_id) {
+      const c = await sq(env, "/v2/customers/" + b.customer_id).then((r) => r.customer).catch(() => null);
+      notified = !!(c && c.phone_number);
+    }
+    if (!notified) continue;
     if (!opt.dry) {
       await sq(env, "/v2/bookings/" + b.id + "/cancel", { idempotency_key: "auto-" + b.id + "-" + b.version, booking_version: b.version });
       await notifyWaitlist(env, b).catch((e) => console.error("WAITLIST", e.stack || e));

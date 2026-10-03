@@ -26,6 +26,8 @@ CONFIRM_SINCE = "2026-09-29T17:16:00Z"   # citas reservadas desde aquí
 # Aplica la confirmación también a citas reservadas antes, desde esta fecha de cita (vacío = apagado).
 # Encenderlo solo cuando el SMS de recordatorio de Square lleve el enlace nailsbymelyg.com/confirmar.
 CONFIRM_ALL_FROM = "2026-10-01T05:00:00Z"   # 1 de octubre, 00:00 hora de Katy
+# El SMS de recordatorio de Square (con el enlace para confirmar) cuenta como aviso desde esta fecha de cita
+CONFIRM_SQUARE_SMS_FROM = "2026-10-06T05:00:00Z"   # lunes 6 de octubre, 00:00 hora de Katy
 
 [[kv_namespaces]]
 binding = "WAITLIST"

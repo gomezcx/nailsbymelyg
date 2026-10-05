@@ -1229,4 +1229,11 @@ html { overflow-x: clip; }
 /* ficha del look: se desliza por dentro en el móvil */
 .look-dialog { max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .look-dialog .close { position: sticky; top: 12px; margin: 12px 12px -56px auto; display: grid; }
-@media (max-width: 759px) { .look-dialog .pics img { max-height: 56vh; } }
+@media (max-width: 759px) {
+  .look-dialog .pics img { max-height: 40vh; }
+  .look-dialog .body { padding-bottom: 0; }
+  /* botones siempre a la vista, pegados abajo */
+  .look-dialog .step-actions { position: sticky; bottom: 0; z-index: 2; margin: 18px calc(clamp(28px, 4vw, 48px) * -1) 0; padding: 14px clamp(28px, 4vw, 48px) calc(14px + env(safe-area-inset-bottom));
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--paper-2); box-shadow: 0 -14px 24px -16px rgba(58,24,32,.35); }
+  .look-dialog .step-actions .btn { min-height: 50px; padding: 0 10px; font-size: 12px; letter-spacing: .1em; width: 100%; }
+}

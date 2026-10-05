@@ -370,9 +370,12 @@
       q("[data-dlg-book]").href = "reservar.html?servicio=" + L.svc + "&diseno=" + encodeURIComponent("Look 0" + b.getAttribute("data-look") + " · " + tx[0]);
       q("[data-dlg-wa]").href = waLink(I18N.t("Hola Mely, me encantó el look «", "Hi Mely, I loved the look “") + tx[0] + I18N.t("». ¿Me lo puedes hacer?", "”. Can you do it for me?"));
       dlg.showModal();
+      dlg.scrollTop = 0;
+      if (window.MELY_LENIS) window.MELY_LENIS.stop(); // el fondo no se mueve; la ficha se desliza por dentro
     });
     q("[data-close]").addEventListener("click", function () { dlg.close(); });
     dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", function () { if (window.MELY_LENIS) window.MELY_LENIS.start(); });
   }
 
   /* ---------- Aviso de idioma (primera visita) ---------- */

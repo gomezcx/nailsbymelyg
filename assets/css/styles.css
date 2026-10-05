@@ -1225,3 +1225,8 @@ html { overflow-x: clip; }
 #cb-hours b { color: var(--wine); font-weight: 600; }
 /* títulos que reciben el foco al cambiar de paso: sin recuadro */
 .step h1[tabindex="-1"]:focus, .done-box h1[tabindex="-1"]:focus { outline: none; }
+
+/* ficha del look: se desliza por dentro en el móvil */
+.look-dialog { max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.look-dialog .close { position: sticky; top: 12px; margin: 12px 12px -56px auto; display: grid; }
+@media (max-width: 759px) { .look-dialog .pics img { max-height: 56vh; } }

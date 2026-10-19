@@ -213,7 +213,7 @@
     if (!name || !okMail || !S.day) return;
     var s = svc(S.svcId);
     $("#wl-msg").textContent = t("Guardando…", "Saving…");
-    api("/waitlist", { name: name, email: email, phone: phone, date: S.day, service: s ? s[I.lang][0] : "", lang: I.lang })
+    api("/waitlist", { hp: ($("#wl-form input[name=website]") || {}).value || "", name: name, email: email, phone: phone, date: S.day, service: s ? s[I.lang][0] : "", lang: I.lang })
       .then(function () { $("#wl-msg").textContent = t("¡Listo! Estás en la lista de espera de ese día. Si se libera un hueco te escribo al correo.", "Done! You're on that day's waitlist. If a spot opens I'll email you."); })
       .catch(function () { $("#wl-msg").textContent = t("No se pudo guardar. Escríbeme por WhatsApp.", "Couldn't save. Message me on WhatsApp."); });
   });
@@ -330,7 +330,7 @@
 
     var bookP = DEMO ? giftP.then(function () { return new Promise(function (res) { setTimeout(function () { res({ booking: { id: "DEMO" } }); }, 900); }); }) :
       tokenP.then(function (token) {
-        return api("/book", { idempotencyKey: uid(), startAt: S.slot.startAt, segments: S.slot.segments, customer: customer, note: note, cardToken: token, giftCardGan: useGift ? gift.gan : "", lang: I.lang });
+        return api("/book", { hp: ($("#data-form input[name=website]") || {}).value || "", idempotencyKey: uid(), startAt: S.slot.startAt, segments: S.slot.segments, customer: customer, note: note, cardToken: token, giftCardGan: useGift ? gift.gan : "", lang: I.lang });
       });
 
     bookP.then(function () {

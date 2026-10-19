@@ -278,7 +278,8 @@
       amount: value(), label: S.mode === "service" ? svc()[I.lang][0] : "",
       to: S.to.trim(), from: S.from.trim(), msg: S.msg.trim(), theme: S.theme, polish: S.polish,
       via: S.via, contact: S.contact.trim(), buyerEmail: S.buyerEmail.trim(), order: code, lang: I.lang,
-      idempotencyKey: code + "-" + Date.now().toString(36)
+      idempotencyKey: code + "-" + Date.now().toString(36),
+      hp: (form.querySelector('input[name="website"]') || {}).value || ""
     };
     var p;
     if (DEMO) {

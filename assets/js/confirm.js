@@ -80,7 +80,7 @@
     if (!field("cf-id", isMail || id.replace(/\D/g, "").length >= 10)) return;
     if (!API) { out.innerHTML = '<p class="alert">' + t("La confirmación en línea no está disponible ahora. Escríbeme por WhatsApp.", "Online confirmation isn't available right now. Message me on WhatsApp.") + "</p>"; return; }
     out.innerHTML = '<p class="note">' + t("Buscando tu cita…", "Looking up your appointment…") + "</p>";
-    post("/confirm/lookup", isMail ? { email: id } : { phone: id }).then(show).catch(failed);
+    post("/confirm/lookup", Object.assign(isMail ? { email: id } : { phone: id }, { hp: (document.querySelector('input[name="website"]') || {}).value || "" })).then(show).catch(failed);
   });
 
   // enlace directo del recordatorio (?t=…): la cita aparece sin escribir nada

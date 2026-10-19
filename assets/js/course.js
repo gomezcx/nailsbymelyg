@@ -156,7 +156,7 @@
         return card.tokenize();
       }).then(function (r) {
         if (r.status !== "OK") throw Object.assign(new Error("card"), { code: "CARD" });
-        return post("/course/book", { idempotencyKey: uid(), course: S.course, dates: picked().map(function (x) { return x.date; }), customer: customer, cardToken: r.token, lang: I.lang });
+        return post("/course/book", { hp: ($("#cb-form input[name=website]") || {}).value || "", idempotencyKey: uid(), course: S.course, dates: picked().map(function (x) { return x.date; }), customer: customer, cardToken: r.token, lang: I.lang });
       });
     p.then(function (r) {
       done(customer.givenName, r);

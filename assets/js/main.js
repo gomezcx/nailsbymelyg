@@ -433,4 +433,27 @@
   I18N.set(I18N.lang);
   reveal();
 
+
+  /* ---------- Aviso de cookies (una sola vez) ---------- */
+  // La web no usa cookies de publicidad ni de seguimiento: solo informa y se recuerda.
+  (function () {
+    var seen = false;
+    try { seen = localStorage.getItem("mely-cookies") === "1"; } catch (e) { seen = true; }
+    if (seen || document.body.dataset.page === "notfound") return;
+    var bar = document.createElement("div");
+    bar.className = "cookie-note"; bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "Cookies");
+    bar.innerHTML = "<p>" + I18N.t("Esta web no usa cookies de publicidad: solo guarda lo necesario para funcionar (tu idioma y tus diseños).", "This site doesn’t use advertising cookies: it only stores what it needs to work (your language and designs).") +
+      ' <a href="privacidad.html">' + I18N.t("Más info", "Learn more") + "</a></p><button type=\"button\">" + I18N.t("Entendido", "Got it") + "</button>";
+    document.body.appendChild(bar);
+    // no se monta sobre el aviso de idioma: espera a que se cierre
+    var tries = 0;
+    (function wait() {
+      if (document.querySelector(".lang-hint") && tries++ < 40) return setTimeout(wait, 1000);
+      setTimeout(function () { bar.classList.add("show"); }, 800);
+    })();
+    bar.querySelector("button").addEventListener("click", function () {
+      try { localStorage.setItem("mely-cookies", "1"); } catch (e) {}
+      bar.classList.remove("show"); setTimeout(function () { bar.remove(); }, 500);
+    });
+  })();
 })();

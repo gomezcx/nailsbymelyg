@@ -54,6 +54,13 @@ export default {
     try {
       if (request.method === "GET" && url.pathname === "/services") return json(await services(env, ctx), 200, cors, 600);
       if (request.method === "POST" && url.pathname === "/availability") return json(await availability(env, await body(request)), 200, cors);
+      // anti-spam: formularios rellenados por robots (campo trampa) y demasiados intentos seguidos
+      if (request.method === "POST" && ["/book", "/waitlist", "/course/book", "/giftcard/purchase", "/confirm/lookup"].includes(url.pathname)) {
+        const raw = await request.clone().json().catch(() => ({}));
+        if (raw && raw.hp) return json({ ok: true }, 200, cors); // robot: se le dice "ok" y no se hace nada
+        const limits = { "/waitlist": 6, "/confirm/lookup": 20, "/book": 12, "/course/book": 8, "/giftcard/purchase": 8 };
+        if (env.WAITLIST && !(await rateOk(env, request, url.pathname, limits[url.pathname]))) return json({ error: "Too many requests" }, 429, cors);
+      }
       if (request.method === "POST" && url.pathname === "/book") return json(await book(env, await body(request), ctx), 200, cors);
       if (request.method === "POST" && url.pathname === "/giftcard/purchase") return json(await giftPurchase(env, await body(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/waitlist") return json(await waitlistJoin(env, await body(request)), 200, cors);
@@ -154,6 +161,16 @@ async function sq(env, path, payload, method) {
     throw e;
   }
   return data;
+}
+
+// límite de intentos por IP y por hora (KV)
+async function rateOk(env, request, route, max) {
+  const ip = request.headers.get("CF-Connecting-IP") || "x";
+  const key = "rl:" + route + ":" + ip + ":" + new Date().toISOString().slice(0, 13);
+  const n = parseInt((await env.WAITLIST.get(key)) || "0", 10) + 1;
+  if (n > max) return false;
+  await env.WAITLIST.put(key, String(n), { expirationTtl: 3700 });
+  return true;
 }
 
 async function services(env, ctx, fresh) {

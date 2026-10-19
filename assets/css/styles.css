@@ -1237,3 +1237,18 @@ html { overflow-x: clip; }
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--paper-2); box-shadow: 0 -14px 24px -16px rgba(58,24,32,.35); }
   .look-dialog .step-actions .btn { min-height: 50px; padding: 0 10px; font-size: 12px; letter-spacing: .1em; width: 100%; }
 }
+
+/* campo trampa anti-spam: invisible para personas */
+.hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* aviso de cookies discreto */
+.cookie-note { position: fixed; z-index: 95; left: 16px; bottom: 16px; max-width: 380px; display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: var(--paper-2); border: 1px solid var(--wine-line); box-shadow: 0 18px 40px -20px rgba(58,24,32,.45); font-size: 13px; line-height: 1.45; color: var(--wine-soft); opacity: 0; transform: translateY(16px); transition: opacity .5s, transform .5s var(--ease); }
+.cookie-note.show { opacity: 1; transform: none; }
+.cookie-note p { margin: 0; }
+.cookie-note a { color: var(--wine); }
+.cookie-note button { flex: none; border: 1px solid var(--wine); background: var(--wine); color: var(--on-wine); padding: 8px 12px; font: 500 12px var(--sans); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+@media (max-width: 959px) { .cookie-note { left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom)); max-width: none; } }
+
+/* páginas legales: títulos de documento */
+.legal-text h2 { font-size: clamp(20px, 2.4vw, 26px); text-transform: none; margin: 34px 0 10px; line-height: 1.2; }
+.legal-text p { line-height: 1.7; }

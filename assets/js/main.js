@@ -385,7 +385,9 @@
     try { localStorage.setItem("mely-lang", I18N.lang); } catch (e) {}
     if (hint) { hint.classList.remove("show"); setTimeout(function () { if (hint) hint.remove(); hint = null; }, 500); }
   }
-  if (autoLang) {
+  // dentro de otra página (iframe, vista previa): sin avisos flotantes
+  var embedded = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (autoLang && !embedded) {
     hint = document.createElement("div");
     hint.className = "lang-hint";
     hint.setAttribute("role", "region");
@@ -439,7 +441,7 @@
   (function () {
     var seen = false;
     try { seen = localStorage.getItem("mely-cookies") === "1"; } catch (e) { seen = true; }
-    if (seen || document.body.dataset.page === "notfound") return;
+    if (seen || embedded || document.body.dataset.page === "notfound") return;
     var bar = document.createElement("div");
     bar.className = "cookie-note"; bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "Cookies");
     bar.innerHTML = "<p>" + I18N.t("Esta web no usa cookies de publicidad: solo guarda lo necesario para funcionar (tu idioma y tus diseños).", "This site doesn’t use advertising cookies: it only stores what it needs to work (your language and designs).") +

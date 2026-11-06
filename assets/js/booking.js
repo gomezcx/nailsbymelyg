@@ -15,7 +15,8 @@
   var LIVE = !!C.apiBase && !DEMO;
 
   var S = {
-    step: 1, svcId: params.get("servicio") || null, addon: false,
+    step: 1, svcIds: params.get("servicio") ? [params.get("servicio")] : [], addon: false,
+    staff: "", team: [],   // "" = la que esté disponible
     catalog: null,       // nombre en Square → { id, version }
     slots: null,         // [{ startAt, date, segments }]
     week: 0, day: null, slot: null,
@@ -31,8 +32,17 @@
   /* ---------- utilidades ---------- */
   function svc(id) { return D.services.filter(function (s) { return s.id === id; })[0]; }
   function removal() { return svc("removal"); }
-  function totalMin() { var s = svc(S.svcId); return s ? s.min + (S.addon ? removal().min : 0) : 0; }
-  function totalPrice() { var s = svc(S.svcId); return s ? s.price + (S.addon ? removal().price : 0) : 0; }
+  var MAX_SVC = 2;
+  function picked() { return S.svcIds.map(svc).filter(Boolean); }
+  function sum(k) { return picked().reduce(function (n, s) { return n + s[k]; }, 0) + (S.addon && picked().length ? removal()[k] : 0); }
+  function totalMin() { return sum("min"); }
+  function totalPrice() { return sum("price"); }
+  function names() { return picked().map(function (s) { return s[I.lang][0]; }).join(" + ") + (S.addon && picked().length ? " + " + removal()[I.lang][0] : ""); }
+  function staffName(id) {
+    if (!id) return t("La que esté disponible", "Whoever is available");
+    var m = S.team.filter(function (x) { return x.id === id; })[0];
+    return m ? m.short : "";
+  }
   function locale() { return I.lang === "en" ? "en-US" : "es-US"; }
   function ymd(date) { // fecha (Y-M-D) en hora de Houston
     var p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
@@ -96,21 +106,56 @@
         var tx = s[I.lang];
         var lab = document.createElement("label");
         lab.className = "svc";
-        lab.innerHTML = '<input type="radio" name="svc" value="' + s.id + '"' + (S.svcId === s.id ? " checked" : "") + ">" +
+        lab.innerHTML = '<input type="checkbox" name="svc" value="' + s.id + '"' + (S.svcIds.indexOf(s.id) > -1 ? " checked" : "") + ">" +
           "<b>" + tx[0] + '</b><span class="p">$' + s.price + '</span><span class="d">' + window.MELY_DUR(s.min) + " · " + tx[1] + "</span>";
         box.appendChild(lab);
       });
       root.appendChild(fs);
     });
-    $("#to-2").disabled = !S.svcId;
+    $("#to-2").disabled = !S.svcIds.length;
+    renderStaff();
+  }
+  // ¿quién te atiende? (sale cuando en Square hay más de una profesional reservable)
+  function renderStaff() {
+    var box = $("#staff-box");
+    if (!box) return;
+    box.hidden = S.team.length < 2;
+    if (box.hidden) return;
+    var opts = [{ id: "", short: t("La que esté disponible", "Whoever is available") }].concat(S.team);
+    $("#staff-list").style.gridTemplateColumns = "repeat(" + opts.length + ", 1fr)";
+    $("#staff-list").innerHTML = opts.map(function (m) {
+      return '<label><input type="radio" name="staff" value="' + m.id + '"' + (S.staff === m.id ? " checked" : "") + "><span>" + escapeHtml(m.short) + "</span></label>";
+    }).join("");
+  }
+  function loadTeam() {
+    if (!LIVE) return;
+    api("/team").then(function (r) {
+      S.team = (r.team || []).map(function (m) {
+        var first = String(m.name || "").trim().split(/\s+/)[0];
+        return { id: m.id, short: /^dilmelys$/i.test(first) ? "Mely" : first };
+      });
+      renderStaff(); renderSummary();
+    }).catch(function () {});
   }
   $("#svc-form").addEventListener("change", function (e) {
-    if (e.target.name === "svc") { S.svcId = e.target.value; S.slots = null; S.day = null; S.slot = null; }
+    if (e.target.name === "svc") {
+      var id = e.target.value, at = S.svcIds.indexOf(id);
+      if (e.target.checked && at < 0) {
+        S.svcIds.push(id);
+        if (S.svcIds.length > MAX_SVC) { // se queda con los últimos elegidos
+          var out = S.svcIds.shift();
+          var old = document.querySelector('#svc-list input[value="' + out + '"]'); if (old) old.checked = false;
+          if (window.MELY_TOAST) window.MELY_TOAST(t("Puedes elegir hasta 2 servicios.", "You can pick up to 2 services."));
+        }
+      } else if (!e.target.checked && at > -1) S.svcIds.splice(at, 1);
+      S.slots = null; S.day = null; S.slot = null;
+    }
+    if (e.target.name === "staff") { S.staff = e.target.value; S.slots = null; S.day = null; S.slot = null; }
     if (e.target.id === "addon-removal") { S.addon = e.target.checked; S.slots = null; S.day = null; S.slot = null; }
-    $("#to-2").disabled = !S.svcId;
+    $("#to-2").disabled = !S.svcIds.length;
     renderSummary();
   });
-  $("#svc-form").addEventListener("submit", function (e) { e.preventDefault(); if (S.svcId) go(2); });
+  $("#svc-form").addEventListener("submit", function (e) { e.preventDefault(); if (S.svcIds.length) go(2); });
 
   /* ---------- 2 · fecha y hora ---------- */
   function enterStep2() {
@@ -127,7 +172,7 @@
     renderDays(true);
     var p = DEMO ? demoSlots() : loadCatalog().then(function () {
       var ids = segmentIds();
-      return api("/availability", { serviceVariationIds: ids.map(function (x) { return x.id; }), days: 28 })
+      return api("/availability", { serviceVariationIds: ids.map(function (x) { return x.id; }), teamMemberId: S.staff, days: 28 })
         .then(function (r) { return r.slots || []; });
     });
     p.then(function (slots) {
@@ -151,8 +196,8 @@
   function daysBetween(a, b) { return Math.round((dateFromYmd(b) - dateFromYmd(a)) / 864e5); }
 
   function segmentIds() {
-    var list = [svc(S.svcId)];
-    if (S.addon) list.unshift(removal()); // primero se retira, luego el servicio
+    var list = picked().slice();
+    if (S.addon) list.unshift(removal()); // primero se retira, luego los servicios
     return list.map(function (s) {
       var c = S.catalog && S.catalog[norm(s.sq)];
       if (!c) throw new Error("Servicio no encontrado en Square: " + s.sq);
@@ -211,7 +256,7 @@
     var okMail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
     $("#wl-email").closest(".field").classList.toggle("invalid", !okMail);
     if (!name || !okMail || !S.day) return;
-    var s = svc(S.svcId);
+    var s = picked().length ? { es: [names()], en: [names()] } : null;
     $("#wl-msg").textContent = t("Guardando…", "Saving…");
     api("/waitlist", { hp: ($("#wl-form input[name=website]") || {}).value || "", name: name, email: email, phone: phone, date: S.day, service: s ? s[I.lang][0] : "", lang: I.lang })
       .then(function () { $("#wl-msg").textContent = t("¡Listo! Estás en la lista de espera de ese día. Si se libera un hueco te escribo al correo.", "Done! You're on that day's waitlist. If a spot opens I'll email you."); })
@@ -252,7 +297,7 @@
     $("#gift-field").hidden = !gift;
     $("#card-field").hidden = gift || !LIVE || !C.squareAppId || !C.squareLocationId;
   }
-  function price() { var s = svc(S.svcId); return s ? s.price + (S.addon ? removal().price : 0) : 0; }
+  function price() { return totalPrice(); }
   // saldo de la gift card (lo que diga Square)
   var gift = { gan: "", ok: false, balance: 0 };
   function checkGift() {
@@ -354,12 +399,11 @@
   /* ---------- tarjeta "te espero" ---------- */
   var T = {};
   function ticket(name, day, time, useGift) {
-    var s = svc(S.svcId);
     T = {
       hi: t(name + ", te espero", name + ", I can't wait to see you"),
       msg: t("Ya tienes tu hora conmigo. Ven sin prisa: ese rato es solo tuyo y lo vamos a disfrutar.", "Your time with me is booked. Come relaxed: that time is all yours and we're going to enjoy it."),
       when: day.charAt(0).toUpperCase() + day.slice(1) + " · " + time,
-      what: s[I.lang][0] + (S.addon ? " + " + removal()[I.lang][0] : "") + (useGift ? " · 🎁 gift card" : "")
+      what: names() + (slotStaff() ? " · " + t("con ", "with ") + slotStaff() : "") + (useGift ? " · 🎁 gift card" : "")
     };
     $("#t-hi").innerHTML = escapeHtml(T.hi).replace(/(te espero|I can't wait to see you)$/, "<em>$1</em>");
     $("#t-msg").textContent = T.msg;
@@ -425,19 +469,20 @@
   }
 
   function buildIcs() {
-    var s = svc(S.svcId), start = new Date(S.slot.startAt), end = new Date(start.getTime() + totalMin() * 6e4);
+    var start = new Date(S.slot.startAt), end = new Date(start.getTime() + totalMin() * 6e4);
     var f = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
     var ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Nails by MelyG//ES", "BEGIN:VEVENT", "UID:" + uid() + "@nailsbymelyg.com",
       "DTSTAMP:" + f(new Date()), "DTSTART:" + f(start), "DTEND:" + f(end),
-      "SUMMARY:" + s[I.lang][0] + " · Nails by MelyG", "LOCATION:2727 N Mason Rd\\, Suite 301\\, Katy\\, TX 77449",
+      "SUMMARY:" + names() + " · Nails by MelyG", "LOCATION:2727 N Mason Rd\\, Suite 301\\, Katy\\, TX 77449",
       "END:VEVENT", "END:VCALENDAR"].join("\r\n");
     $("#ics").href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
   }
 
   /* ---------- resumen ---------- */
   function renderSummary() {
-    var s = svc(S.svcId);
-    $("#sum-svc").textContent = s ? s[I.lang][0] + (S.addon ? t(" + retirada", " + removal") : "") : t("Elige un servicio", "Choose a service");
+    var s = picked().length;
+    $("#sum-svc").textContent = s ? names() : t("Elige un servicio", "Choose a service");
+    if ($("#sum-with")) $("#sum-with").textContent = slotStaff() || (S.team.length > 1 ? staffName(S.staff) : (S.team[0] ? S.team[0].short : "Mely"));
     $("#sum-price").textContent = s ? "$" + totalPrice() : "—";
     $("#sum-dur").textContent = s ? window.MELY_DUR(totalMin()) : "—";
     $("#sum-date").textContent = S.slot ? fmtDay(S.day, { weekday: "short", day: "numeric", month: "short" }) : "—";
@@ -470,7 +515,13 @@
     renderSummary();
   });
 
-  if (S.svcId && !svc(S.svcId)) S.svcId = null;
+  // quién atiende el hueco elegido (Square lo dice en el hueco)
+  function slotStaff() {
+    var seg = S.slot && S.slot.segments && S.slot.segments[0];
+    return seg ? staffName(seg.team_member_id) : "";
+  }
+  S.svcIds = S.svcIds.filter(function (id) { return !!svc(id); });
   renderServices();
+  loadTeam();
   go(1);
 })();

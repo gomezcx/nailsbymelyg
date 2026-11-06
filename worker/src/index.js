@@ -53,6 +53,7 @@ export default {
     const url = new URL(request.url);
     try {
       if (request.method === "GET" && url.pathname === "/services") return json(await services(env, ctx), 200, cors, 600);
+      if (request.method === "GET" && url.pathname === "/team") return json(await team(env, ctx), 200, cors, 600);
       if (request.method === "POST" && url.pathname === "/availability") return json(await availability(env, await body(request)), 200, cors);
       // anti-spam: formularios rellenados por robots (campo trampa) y demasiados intentos seguidos
       if (request.method === "POST" && ["/book", "/waitlist", "/course/book", "/giftcard/purchase", "/confirm/lookup"].includes(url.pathname)) {
@@ -208,13 +209,25 @@ async function services(env, ctx, fresh) {
   return result;
 }
 
-async function searchAvailability(env, ids, startAt, endAt) {
+// equipo que se puede reservar online (nombre visible y su id de Square)
+async function team(env, ctx) {
+  const cache = caches.default, key = new Request("https://cache.local/team/" + env.SQUARE_LOCATION_ID);
+  const hit = await cache.match(key);
+  if (hit) return hit.json();
+  const r = await sq(env, "/v2/bookings/team-member-booking-profiles?bookable_only=true&location_id=" + env.SQUARE_LOCATION_ID + "&limit=50");
+  const out = { team: (r.team_member_booking_profiles || []).filter((p) => p.is_bookable).map((p) => ({ id: p.team_member_id, name: p.display_name })) };
+  ctx.waitUntil(cache.put(key, new Response(JSON.stringify(out), { headers: { "Cache-Control": "max-age=600" } })));
+  return out;
+}
+
+async function searchAvailability(env, ids, startAt, endAt, teamMemberId) {
+  const tm = teamMemberId ? { team_member_id_filter: { any: [teamMemberId] } } : {};
   const r = await sq(env, "/v2/bookings/availability/search", {
     query: {
       filter: {
         start_at_range: { start_at: startAt, end_at: endAt },
         location_id: env.SQUARE_LOCATION_ID,
-        segment_filters: ids.map((id) => ({ service_variation_id: id })),
+        segment_filters: ids.map((id) => Object.assign({ service_variation_id: id }, tm)),
       },
     },
   });
@@ -227,7 +240,8 @@ async function availability(env, b) {
   const days = Math.min(Math.max(parseInt(b.days, 10) || 14, 1), 31);
   const start = new Date(Date.now() + 60 * 60 * 1000); // desde dentro de 1 hora
   const end = new Date(start.getTime() + days * 864e5);
-  const list = await searchAvailability(env, ids, start.toISOString(), end.toISOString());
+  const tmId = /^[A-Za-z0-9_-]{4,40}$/.test(b.teamMemberId || "") ? b.teamMemberId : "";
+  const list = await searchAvailability(env, ids, start.toISOString(), end.toISOString(), tmId);
   // una entrada por hora (si hay varias profesionales, nos quedamos con la primera)
   const seen = new Set();
   const slots = [];
@@ -256,7 +270,8 @@ async function book(env, b, ctx) {
   // ---- ¿sigue libre? (se usa lo que diga Square, no lo que mande el navegador)
   const from = new Date(Date.parse(b.startAt) - 60000);
   const to = new Date(from.getTime() + 864e5);
-  const again = await searchAvailability(env, ids, from.toISOString(), to.toISOString());
+  const wantTm = (b.segments || [])[0] && b.segments[0].team_member_id;
+  const again = await searchAvailability(env, ids, from.toISOString(), to.toISOString(), /^[A-Za-z0-9_-]{4,40}$/.test(wantTm || "") ? wantTm : "");
   const match = again.find((a) => Date.parse(a.start_at) === Date.parse(b.startAt));
   if (!match) { const e = new Error("Slot taken"); e.status = 409; e.code = "SLOT_TAKEN"; e.public = "Slot taken"; throw e; }
 

@@ -155,6 +155,8 @@ window.MELY_EN = {
   "bk.demo": "Demo mode: times are examples and no appointment is created.",
   "bk.h1": "Choose your <em>service</em>",
   "bk.extras": "Extras",
+  "bk.multi": "You can pick up to 2 services, for example a manicure and a pedicure.",
+  "bk.staffH": "Who would you like?",
   "bk.extrasH": "Coming in with product on?",
   "bk.removal": "Add removal of previous product (+$15 · 35 min)",
   "bk.next": "Continue",

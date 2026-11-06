@@ -1252,3 +1252,8 @@ html { overflow-x: clip; }
 /* páginas legales: títulos de documento */
 .legal-text h2 { font-size: clamp(20px, 2.4vw, 26px); text-transform: none; margin: 34px 0 10px; line-height: 1.2; }
 .legal-text p { line-height: 1.7; }
+
+/* reservar: varios servicios y quién atiende */
+.bk-multi { margin: -6px 0 22px; }
+.bk-staff-seg { max-width: 560px; }
+.bk-staff-seg span { padding: 12px 6px; font-size: 14px; }

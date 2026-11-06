@@ -38,8 +38,12 @@
   function totalMin() { return sum("min"); }
   function totalPrice() { return sum("price"); }
   function names() { return picked().map(function (s) { return s[I.lang][0]; }).join(" + ") + (S.addon && picked().length ? " + " + removal()[I.lang][0] : ""); }
+  // preferencia de quién atiende (solo en la web: la cita va a la agenda de Mely con una nota)
+  var PREF = [{ id: "pref:Mely", short: "Mely" }, { id: "pref:Georgina", short: "Georgina" }];
+  function isPref(id) { return /^pref:/.test(id || ""); }
   function staffName(id) {
     if (!id) return t("La que esté disponible", "Whoever is available");
+    if (isPref(id)) return id.slice(5);
     var m = S.team.filter(function (x) { return x.id === id; })[0];
     return m ? m.short : "";
   }
@@ -119,9 +123,8 @@
   function renderStaff() {
     var box = $("#staff-box");
     if (!box) return;
-    box.hidden = S.team.length < 2;
-    if (box.hidden) return;
-    var opts = [{ id: "", short: t("La que esté disponible", "Whoever is available") }].concat(S.team);
+    box.hidden = false;
+    var opts = [{ id: "", short: t("La que esté disponible", "Whoever is available") }].concat(S.team.length >= 2 ? S.team : PREF);
     $("#staff-list").style.gridTemplateColumns = "repeat(" + opts.length + ", 1fr)";
     $("#staff-list").innerHTML = opts.map(function (m) {
       return '<label><input type="radio" name="staff" value="' + m.id + '"' + (S.staff === m.id ? " checked" : "") + "><span>" + escapeHtml(m.short) + "</span></label>";
@@ -172,7 +175,7 @@
     renderDays(true);
     var p = DEMO ? demoSlots() : loadCatalog().then(function () {
       var ids = segmentIds();
-      return api("/availability", { serviceVariationIds: ids.map(function (x) { return x.id; }), teamMemberId: S.staff, days: 28 })
+      return api("/availability", { serviceVariationIds: ids.map(function (x) { return x.id; }), teamMemberId: isPref(S.staff) ? "" : S.staff, days: 28 })
         .then(function (r) { return r.slots || []; });
     });
     p.then(function (slots) {
@@ -376,6 +379,7 @@
     S.busy = true; btn.disabled = true; btn.textContent = t("Confirmando…", "Confirming…");
     var customer = { givenName: $("#f-given").value.trim(), familyName: $("#f-family").value.trim(), phone: e164($("#f-phone").value), email: $("#f-email").value.trim() };
     var note = $("#f-note").value.trim();
+    if (isPref(S.staff)) note = "Quiere que la atienda: " + staffName(S.staff) + (note ? "\n" + note : "");
 
     var useGift = payMode() === "gift";
     var giftP = useGift ? (gift.ok && gift.gan === $("#f-gift").value.replace(/\s/g, "") ? Promise.resolve(true) : checkGift()).then(function (ok) {
@@ -495,7 +499,7 @@
   function renderSummary() {
     var s = picked().length;
     $("#sum-svc").textContent = s ? names() : t("Elige un servicio", "Choose a service");
-    if ($("#sum-with")) $("#sum-with").textContent = slotStaff() || (S.team.length > 1 ? staffName(S.staff) : (S.team[0] ? S.team[0].short : "Mely"));
+    if ($("#sum-with")) $("#sum-with").textContent = slotStaff() || staffName(S.staff);
     $("#sum-price").textContent = s ? "$" + totalPrice() : "—";
     $("#sum-dur").textContent = s ? window.MELY_DUR(totalMin()) : "—";
     $("#sum-date").textContent = S.slot ? fmtDay(S.day, { weekday: "short", day: "numeric", month: "short" }) : "—";
@@ -530,6 +534,8 @@
 
   // quién atiende el hueco elegido (Square lo dice en el hueco)
   function slotStaff() {
+    if (isPref(S.staff)) return staffName(S.staff); // lo que eligió la clienta
+    if (!S.staff && S.team.length < 2) return "";
     var seg = S.slot && S.slot.segments && S.slot.segments[0];
     return seg ? staffName(seg.team_member_id) : "";
   }

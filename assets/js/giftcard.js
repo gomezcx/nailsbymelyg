@@ -203,7 +203,7 @@
   function orderText() {
     var p = POLISH[S.polish], th = THEMES.filter(function (x) { return x.id === S.theme; })[0];
     return [
-      t("Hola Mely, quiero una gift card 🎁", "Hi Mely, I’d like a gift card 🎁"),
+      t("Hola Mely, quiero una gift card", "Hi Mely, I’d like a gift card"),
       "",
       "• " + t("Valor: ", "Value: ") + valueLabel(),
       "• " + t("Para: ", "For: ") + S.to.trim(),
@@ -245,7 +245,7 @@
       issued = r;
       preview();
       var viaWa = S.via === "whatsapp";
-      var shareTxt = t("¡Tienes una gift card de Nails by MelyG! 💅 ", "You’ve got a Nails by MelyG gift card! 💅 ") + (S.direct ? "" : "") +
+      var shareTxt = t("¡Tienes una gift card de Nails by MelyG! ", "You’ve got a Nails by MelyG gift card! ") + (S.direct ? "" : "") +
         t("De ", "From ") + S.from.trim() + ": " + r.link;
       var wa = $("[data-gc-wa]");
       if (viaWa) {

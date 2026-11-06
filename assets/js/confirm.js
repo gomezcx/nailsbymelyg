@@ -32,8 +32,8 @@
         var hi = b.name ? esc(b.name) + t(", te espero", ", I can't wait to see you") : t("Te espero", "I can't wait to see you");
         return '<article class="cf-card cf-ticket" data-i="' + i + '">' +
           '<div class="bk-ticket">' +
-            '<div class="bk-ticket-top"><img src="assets/img/logo-light.png" width="480" height="244" alt="Nails by MelyG"><span class="eyebrow cf-state">' + (b.confirmed ? t("✅ Confirmada", "✅ Confirmed") : t("Por confirmar", "To confirm")) + "</span></div>" +
-            '<p class="bk-ticket-hi">' + hi.replace(/(te espero|I can't wait to see you)$/, "<em>$1</em>") + " 💅</p>" +
+            '<div class="bk-ticket-top"><img src="assets/img/logo-light.png" width="480" height="244" alt="Nails by MelyG"><span class="eyebrow cf-state">' + (b.confirmed ? t("Confirmada", "Confirmed") : t("Por confirmar", "To confirm")) + "</span></div>" +
+            '<p class="bk-ticket-hi">' + hi.replace(/(te espero|I can't wait to see you)$/, "<em>$1</em>") + "</p>" +
             '<p class="bk-ticket-msg">' + t("Ese rato es solo tuyo. Confírmame que vienes para guardártelo; si no está confirmada 1 hora antes, la cita se libera.", "That time is all yours. Let me know you're coming so I can keep it for you; if it isn't confirmed 1 hour before, the spot is released.") + "</p>" +
             '<dl class="bk-ticket-info">' +
               "<div><dt>" + t("Cuándo", "When") + "</dt><dd>" + esc(b.date) + " · " + esc(b.time) + "</dd></div>" +
@@ -57,7 +57,7 @@
           card.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
           post("/confirm/answer", { token: b.token, answer: ans }).then(function (res) {
             var msg = card.querySelector(".cf-msg");
-            if (res.status === "confirmed") { card.querySelector(".cf-state").textContent = t("✅ Confirmada", "✅ Confirmed"); msg.textContent = t("¡Gracias! Te espero 💅", "Thank you! See you soon 💅"); btn.remove(); }
+            if (res.status === "confirmed") { card.querySelector(".cf-state").textContent = t("Confirmada", "Confirmed"); msg.textContent = t("¡Gracias! Te espero", "Thank you! See you soon"); btn.remove(); }
             else if (res.status === "cancelled") { card.querySelector(".cf-state").textContent = t("Cancelada", "Cancelled"); msg.textContent = t("Tu cita quedó cancelada. Cuando quieras, reserva otra desde la web.", "Your appointment was cancelled. Book again anytime on the website."); card.querySelector(".step-actions").remove(); }
             else msg.textContent = t("Esta cita ya estaba cancelada.", "This appointment was already cancelled.");
             card.querySelectorAll("button").forEach(function (x) { x.disabled = false; });

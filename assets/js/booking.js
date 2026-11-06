@@ -316,7 +316,7 @@
   }
   function giftText() {
     var p = price(), rest = Math.max(0, p - gift.balance);
-    return "✅ <b>" + t("Saldo $", "Balance $") + gift.balance + "</b> · " + (rest
+    return "<b>" + t("Saldo $", "Balance $") + gift.balance + "</b> · " + (rest
       ? t("tu servicio cuesta $" + p + ": pagas los $" + rest + " que faltan en la cita.", "your service is $" + p + ": you pay the remaining $" + rest + " at your appointment.")
       : t("cubre tu servicio de $" + p + ". Se cobra en tu cita.", "covers your $" + p + " service. It's charged at your appointment."));
   }
@@ -416,7 +416,7 @@
       hi: t(name + ", te espero", name + ", I can't wait to see you"),
       msg: t("Ya tienes tu hora conmigo. Ven sin prisa: ese rato es solo tuyo y lo vamos a disfrutar.", "Your time with me is booked. Come relaxed: that time is all yours and we're going to enjoy it."),
       when: day.charAt(0).toUpperCase() + day.slice(1) + " · " + time,
-      what: names() + (slotStaff() ? " · " + t("con ", "with ") + slotStaff() : "") + (useGift ? " · 🎁 gift card" : "")
+      what: names() + (slotStaff() ? " · " + t("con ", "with ") + slotStaff() : "") + (useGift ? " · gift card" : "")
     };
     $("#t-hi").innerHTML = escapeHtml(T.hi).replace(/(te espero|I can't wait to see you)$/, "<em>$1</em>");
     $("#t-msg").textContent = T.msg;

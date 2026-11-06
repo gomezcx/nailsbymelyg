@@ -1257,3 +1257,16 @@ html { overflow-x: clip; }
 .bk-multi { margin: -6px 0 22px; }
 .bk-staff-seg { max-width: 560px; }
 .bk-staff-seg span { padding: 12px 6px; font-size: 14px; }
+
+/* aviso grande antes de reservar */
+.rules-dialog { border: 0; padding: clamp(26px, 5vw, 44px); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; background: var(--paper-2); color: var(--wine); box-shadow: 0 40px 120px -20px rgba(58,24,32,.6); }
+.rules-dialog::backdrop { background: rgba(58,24,32,.65); backdrop-filter: blur(6px); }
+.rules-dialog[open] { animation: dlg-in .5s var(--ease); }
+.rules-dialog h2 { font-size: clamp(28px, 6vw, 40px); margin: 6px 0 22px; line-height: 1.1; }
+.rules-list { list-style: none; margin: 0 0 26px; padding: 0; display: grid; gap: 14px; }
+.rules-list li { display: grid; gap: 4px; padding: 14px 16px; background: var(--paper); border-left: 3px solid var(--wine); }
+.rules-list b { font-size: 16px; font-weight: 600; }
+.rules-list span { font-size: 15px; line-height: 1.5; color: var(--wine-soft); }
+.rules-list li:nth-child(2) { background: #F6E3E5; }
+.rules-actions { display: grid; gap: 12px; justify-items: center; }
+.rules-actions .btn { width: 100%; min-height: 56px; }

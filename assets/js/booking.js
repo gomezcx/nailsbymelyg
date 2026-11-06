@@ -354,11 +354,24 @@
   }
   function e164(p) { var d = p.replace(/\D/g, ""); if (d.length === 10) d = "1" + d; return "+" + d; }
 
+  var rules = $("#rules-dialog");
+  function openRules() {
+    if (!rules || !rules.showModal) { S.rulesOk = window.confirm(t("Tu cita hay que confirmarla: el día antes te llega un mensaje y, si no la confirmas al menos 1 hora antes, se libera. ¿Aceptas?", "Your appointment must be confirmed: you'll get a message the day before and, if it isn't confirmed at least 1 hour before, it's released. Do you accept?")); if (S.rulesOk) $("#data-form").requestSubmit(); return; }
+    rules.showModal();
+    if (window.MELY_LENIS) window.MELY_LENIS.stop();
+  }
+  if (rules) {
+    rules.addEventListener("close", function () { if (window.MELY_LENIS) window.MELY_LENIS.start(); });
+    $("#rules-back").addEventListener("click", function () { rules.close(); });
+    $("#rules-ok").addEventListener("click", function () { S.rulesOk = true; rules.close(); $("#data-form").requestSubmit(); });
+  }
   $("#data-form").addEventListener("submit", function (e) {
     e.preventDefault();
     if (S.busy) return;
     showAlert("");
     if (!validate()) return;
+    // aviso grande: sin aceptarlo no se reserva
+    if (!S.rulesOk) { openRules(); return; }
     var btn = $("#confirm");
     S.busy = true; btn.disabled = true; btn.textContent = t("Confirmando…", "Confirming…");
     var customer = { givenName: $("#f-given").value.trim(), familyName: $("#f-family").value.trim(), phone: e164($("#f-phone").value), email: $("#f-email").value.trim() };

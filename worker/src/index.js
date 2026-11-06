@@ -131,6 +131,7 @@ export default {
           testPhone: url.searchParams.get("phone"),
         }), 200, cors);
       }
+      if (request.method === "GET" && url.pathname === "/giftcard/balance" && env.WAITLIST && !(await rateOk(env, request, "/giftcard/balance", 30))) return json({ error: "Too many requests" }, 429, cors);
       if (request.method === "GET" && url.pathname === "/giftcard/balance") return json(await giftBalance(env, url.searchParams.get("gan")), 200, cors);
       return json({ error: "Not found" }, 404, cors);
     } catch (err) {
@@ -1067,6 +1068,8 @@ function bad(msg) { const e = new Error(msg); e.status = 400; e.public = msg; re
 function json(data, status, headers, maxAge) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...headers, "Content-Type": "application/json", "Cache-Control": maxAge ? "public, max-age=" + maxAge : "no-store" },
+    headers: { ...headers, "Content-Type": "application/json", "Cache-Control": maxAge ? "public, max-age=" + maxAge : "no-store",
+      "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains", "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'" },
   });
 }

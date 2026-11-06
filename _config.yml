@@ -1,0 +1,6 @@
+# GitHub Pages: publica solo la web. El sistema de reservas (worker/) y la documentación no se sirven.
+exclude:
+  - worker
+  - README.md
+  - "*.md"
+  - _config.yml

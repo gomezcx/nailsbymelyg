@@ -1,2 +1,7 @@
 .claude/
 .DS_Store
+
+# caché local de Cloudflare (datos de la cuenta)
+.wrangler/
+worker/.wrangler/
+node_modules/

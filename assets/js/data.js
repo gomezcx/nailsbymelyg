@@ -62,6 +62,6 @@ window.MELY_DATA = {
 
   courses: {
     russian: { price: 550, days: 2, seats: 6 },
-    gelx: { price: 550, days: 1 }
+    gelx: { price: 575, days: 1 }
   }
 };

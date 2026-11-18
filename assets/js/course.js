@@ -21,7 +21,8 @@
     russian: { days: 2, es: ["Manicura rusa desde cero", "2 días · técnica completa con torno, preparación y esmaltado"], en: ["Russian manicure from scratch", "2 days · full e-file technique, prep and polish"] },
     gelx: { days: 1, es: ["Gel‑X", "1 día · aplicación, forma y retirada correcta"], en: ["Gel‑X", "1 day · application, shaping and safe removal"] }
   };
-  var PRICE = (window.MELY_DATA && window.MELY_DATA.courses && window.MELY_DATA.courses.russian.price) || 550;
+  var PRICES = (window.MELY_DATA && window.MELY_DATA.courses) || {};
+  function priceOf(k) { return (PRICES[k] && PRICES[k].price) || 550; }
   var S = { course: COURSES[params.get("curso")] ? params.get("curso") : "russian", days: null, sel: [], busy: false };
   var card = null, cardReady = null;
 
@@ -41,7 +42,7 @@
   function renderCourses() {
     $("#cb-courses").innerHTML = Object.keys(COURSES).map(function (k) {
       var c = COURSES[k][I.lang];
-      return '<label class="svc"><input type="radio" name="course" value="' + k + '"' + (S.course === k ? " checked" : "") + "><b>" + c[0] + '</b><span class="p">$' + PRICE + '</span><span class="d">' + c[1] + "</span></label>";
+      return '<label class="svc"><input type="radio" name="course" value="' + k + '"' + (S.course === k ? " checked" : "") + "><b>" + c[0] + '</b><span class="p">$' + priceOf(k) + '</span><span class="d">' + c[1] + "</span></label>";
     }).join("");
     hoursText();
     payText();
@@ -107,7 +108,7 @@
 
   /* ---------- 3 · datos + pago ---------- */
   function payText() {
-    var half = PRICE / 2;
+    var PRICE = priceOf(S.course), half = PRICE / 2;
     $("#cb-pay").innerHTML = "<p><b>" + t("Hoy pagas $", "Today you pay $") + half + "</b> " + t("(50 %) para apartar tu fecha.", "(50 %) to hold your date.") + "</p>" +
       "<p>" + t("Los otros $", "The other $") + half + t(" se cobran solos a la misma tarjeta al terminar el curso.", " are charged automatically to the same card when the course ends.") + "</p>" +
       (picked() ? '<p class="cb-pick">' + COURSES[S.course][I.lang][0] + " · " + datesLabel(picked().map(function (x) { return x.start; }), true) + "</p>" : "");
@@ -150,7 +151,7 @@
     var btn = $("#cb-submit"), label = btn.querySelector("span");
     S.busy = true; btn.disabled = true; label.textContent = t("Procesando…", "Processing…");
     var customer = { givenName: $("#c-given").value.trim(), familyName: $("#c-family").value.trim(), phone: e164($("#c-phone").value), email: $("#c-email").value.trim() };
-    var p = DEMO ? new Promise(function (r) { setTimeout(function () { r({ dates: picked().map(function (x) { return x.start; }), paid: PRICE / 2, remaining: PRICE / 2 }); }, 900); }) :
+    var p = DEMO ? new Promise(function (r) { setTimeout(function () { r({ dates: picked().map(function (x) { return x.start; }), paid: priceOf(S.course) / 2, remaining: priceOf(S.course) / 2 }); }, 900); }) :
       Promise.resolve(cardReady).then(function () {
         if (!card) throw Object.assign(new Error("form"), { code: "CARD" });
         return card.tokenize();

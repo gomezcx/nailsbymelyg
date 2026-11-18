@@ -875,7 +875,7 @@ async function resend(env, to, subject, html, text) {
 const COURSE_MARK = "🎓 Curso";
 const COURSES = {
   russian: { name: "Curso Manicura Rusa", days: 2, price: 550, es: "Manicura rusa desde cero", en: "Russian manicure from scratch" },
-  gelx: { name: "Curso Gel-X", days: 1, price: 550, es: "Gel-X", en: "Gel-X" },
+  gelx: { name: "Curso Gel-X", days: 1, price: 575, es: "Gel-X", en: "Gel-X" },
 };
 const COURSE_START = "09:00", COURSE_HOURS = 8;
 

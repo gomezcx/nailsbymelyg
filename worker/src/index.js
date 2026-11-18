@@ -77,6 +77,20 @@ export default {
         const r = await sq(env, "/v2/bookings/" + id + "/cancel", { idempotency_key: "admin-" + id + "-" + bk.version, booking_version: bk.version });
         return json({ id, status: r.booking.status, start: r.booking.start_at }, 200, cors);
       }
+      if (request.method === "POST" && url.pathname === "/admin/payments") { // revisión: pagos recientes
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        const q = new URLSearchParams({ begin_time: url.searchParams.get("from"), location_id: env.SQUARE_LOCATION_ID, sort_order: "DESC", limit: "100" });
+        const r = await sq(env, "/v2/payments?" + q.toString());
+        return json((r.payments || []).map((p) => ({ id: p.id, at: p.created_at, status: p.status, amount: p.amount_money && p.amount_money.amount / 100,
+          note: p.note || "", ref: p.reference_id || "", customer: p.customer_id || "", receipt: p.receipt_url || "" })), 200, cors);
+      }
+      if (request.method === "GET" && url.pathname === "/admin/course-records") {
+        if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
+        const l = await env.WAITLIST.list({ prefix: "course:" });
+        const out = [];
+        for (const k of l.keys) { const v = await env.WAITLIST.get(k.name, "json"); if (v) out.push({ key: k.name, course: v.course, name: v.name, status: v.status, chargeAt: v.chargeAt, amount: v.amount / 100 }); }
+        return json(out, 200, cors);
+      }
       if (request.method === "POST" && url.pathname === "/admin/bookings") { // revisión: citas de un rango con su estado
         if (!env.ADMIN_KEY || request.headers.get("X-Admin-Key") !== env.ADMIN_KEY) return json({ error: "Forbidden" }, 403, cors);
         const list = await listBookings(env, new Date(url.searchParams.get("from")), new Date(url.searchParams.get("to")));
